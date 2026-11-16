@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class 18 · Gradient descent · Opti</title>
+<meta name="description" content="Unconstrained minimization and gradient descent: optimality conditions, the algorithm, convergence rates, step sizes and scaling. With interactive visuals, flashcards and exam-style questions.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="/">&larr; All classes</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 18 · Non-linear optimization</p>
+  <h1>Gradient <em>descent</em></h1>
+  <p class="lede">How to find the bottom of a function you can only feel locally. What a minimum looks like, how to walk downhill, how fast you get there, and how not to fall off a cliff on the way.</p>
+</header>
+
+<nav class="chapter-toc" aria-label="On this page"><div class="container">
+  <ol>
+    <li><a href="#big-picture"><span>01</span>Big picture</a></li>
+    <li><a href="#parts"><span>02</span>Parts</a></li>
+    <li><a href="#flashcards"><span>03</span>Flashcards</a></li>
+    <li><a href="#quiz"><span>04</span>Test yourself</a></li>
+  </ol>
+</div></nav>
+
+<main class="container">
+
+<section class="block" id="big-picture">
+  <span class="section-badge">Overview</span>
+  <h2>The big picture</h2>
+  <p class="lead">Class 17 showed how to write down non-linear models. Class 18 starts solving them, beginning with the simplest case: no constraints at all.</p>
+  <div class="math-block">\[ \min_{x \in \mathbb{R}^n} f(x), \qquad z^* = \min_x f(x), \qquad x^* \in \arg\min_x f(x) \]</div>
+  <p>Here \(f\) is a smooth function of \(n\) variables. Least-squares regression, fitting a machine-learning model and smoothing a noisy signal all look like this. Constrained problems are harder, but the algorithms for them are built on top of the ideas in this class.</p>
+
+  <div class="tabs">
+    <div class="tab-panel" data-tab="Analogy">
+      <p class="analogy">You are standing on a hillside in thick fog and want to reach the lowest point of the valley. You cannot see the valley. You can only feel the slope under your feet. The sensible plan is to step in the direction that goes down most steeply, check the slope again, and repeat.</p>
+      <p>That is gradient descent. The gradient \(\nabla f(x)\) points in the direction of steepest ascent, so you walk in the direction \(-\nabla f(x)\). Three questions follow immediately. How do you know you have arrived? How long should each step be? And how many steps will it take?</p>
+    </div>
+    <div class="tab-panel" data-tab="In one formula">
+      <div class="math-block">\[ x_{k+1} = x_k - \alpha_k \nabla f(x_k) \]</div>
+      <p>Start somewhere, compute the gradient, take a step of length \(\alpha_k\) against it, and repeat until the gradient is close to zero. Everything else in this class is about when this simple loop works and how fast.</p>
+    </div>
+    <div class="tab-panel" data-tab="Why it matters">
+      <p>Gradient descent is the workhorse of modern machine learning. Every neural network is trained with a variant of it (class 20). It needs only first derivatives, so each iteration is cheap even with millions of variables. The price is that it can be slow when the function is badly shaped, and that it can stop at a local minimum when the function is not convex.</p>
+    </div>
+  </div>
+
+  <h3>The story of the class in four steps</h3>
+  <div class="flow">
+    <div class="step"><b>18a · Target</b><span>What does a minimum look like? Gradient and Hessian conditions.</span></div>
+    <div class="step"><b>18b · Method</b><span>Walk against the gradient. How to measure speed.</span></div>
+    <div class="step"><b>18c · Guarantee</b><span>Under smoothness and convexity, how fast it converges.</span></div>
+    <div class="step"><b>18d · Practice</b><span>Step sizes, starting points, conditioning and scaling.</span></div>
+  </div>
+
+  <div class="callout">
+    <span class="label">Four takeaways from the lecture</span>
+    <ol style="margin:0">
+      <li>Unconstrained minimization is the core problem of non-linear optimization.</li>
+      <li>Descent methods find stationary points, which are only candidates. With convexity, any stationary point is a global minimum. Without it, global optimization is much harder.</li>
+      <li>Gradient descent converges sub-linearly under convexity and linearly under strong convexity.</li>
+      <li>Speed depends on the step size (which you choose) and on the shape of \(f\) (which you do not).</li>
+    </ol>
+  </div>
+
+  <h3>For your note sheet</h3>
+  <div class="sheet">
+    <div><b>Optimality</b>Local min \(\Rightarrow \nabla f = 0,\ \nabla^2 f \succeq 0\).<br>\(\nabla f = 0,\ \nabla^2 f \succ 0 \Rightarrow\) strict local min.<br>Convex: \(\nabla f(x^*) = 0 \iff\) global min.</div>
+    <div><b>Algorithm</b>\(x_{k+1} = x_k - \alpha_k \nabla f(x_k)\)<br>Descent direction: \(\nabla f(x_k)^\top d_k &lt; 0\).<br>Stop when \(\|\nabla f(x_k)\| \le \varepsilon\).</div>
+    <div><b>Convex, M-smooth, \(\alpha = 1/M\)</b>\(f(x_k) - z^* \le \dfrac{M \|x_0 - x^*\|^2}{2k}\)<br>Sub-linear, \(O(1/\varepsilon)\) iterations.</div>
+    <div><b>m-strongly convex, M-smooth, \(\alpha = 1/M\)</b>\(f(x_k) - z^* \le \left(1 - \tfrac{m}{M}\right)^k (f(x_0) - z^*)\)<br>Linear, \(O\!\left(\tfrac{M}{m} \log \tfrac{1}{\varepsilon}\right)\) iterations.</div>
+  </div>
+</section>
+
+<section class="block" id="parts">
+  <span class="section-badge">Parts</span>
+  <h2>Explore the class</h2>
+  <p>Each part takes 15 to 25 minutes and ends with a short check. They build on each other, so read them in order the first time.</p>
+  <div class="subpage-list">
+    <a class="subpage-card" href="optimality-conditions.html"><span class="sp-num">18a</span><div><div class="sp-title">Optimality conditions</div><div class="sp-desc">Stationary points, the Hessian test, saddle points, and why convexity makes life easy</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="gradient-descent.html"><span class="sp-num">18b</span><div><div class="sp-title">The gradient descent algorithm</div><div class="sp-desc">Descent directions, the update rule step by step, and how to measure convergence speed</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="convergence.html"><span class="sp-num">18c</span><div><div class="sp-title">Convergence guarantees</div><div class="sp-desc">Smoothness, strong convexity, the two rate theorems and the proof you should know</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="step-sizes.html"><span class="sp-num">18d</span><div><div class="sp-title">Step sizes, initialization and scaling</div><div class="sp-desc">Line search, the condition number, zigzagging, diagonal scaling and steepest descent</div></div><span class="sp-arrow">&rarr;</span></a>
+  </div>
+</section>
+
+<section class="block flashcards-section" id="flashcards">
+  <span class="section-badge">Quick review</span>
+  <h2>Flashcards</h2>
+  <p>Click a card to flip it. Arrow keys move between cards once a card has focus.</p>
+  <div class="flashcards">
+<script type="application/json">
+[
+ {"q": "What is a stationary point of \\(f\\)?", "a": "A point \\(x\\) with \\(\\nabla f(x) = 0\\). Every local minimum of a differentiable \\(f\\) is a stationary point, but a stationary point can also be a maximum or a saddle point."},
+ {"q": "State the first- and second-order necessary conditions for a local minimum.", "a": "If \\(x^*\\) is a local minimum of a twice continuously differentiable \\(f\\), then \\(\\nabla f(x^*) = 0\\) and \\(\\nabla^2 f(x^*) \\succeq 0\\) (positive semidefinite)."},
+ {"q": "State the second-order sufficient condition.", "a": "If \\(\\nabla f(x^*) = 0\\) and \\(\\nabla^2 f(x^*) \\succ 0\\) (positive definite), then \\(x^*\\) is a strict local minimum. It does not say global."},
+ {"q": "Give a function where \\(\\nabla f(0) = 0\\) and \\(\\nabla^2 f(0) \\succeq 0\\), yet 0 is not a local minimum.", "a": "\\(f(x) = x^3\\) in one dimension, or \\(f(x) = x_1^3 + x_2^2\\). At \\((-\\varepsilon, 0)\\) the value is \\(-\\varepsilon^3 &lt; 0 = f(0)\\)."},
+ {"q": "How do you check that a symmetric \\(2 \\times 2\\) matrix \\(\\begin{pmatrix} a &amp; b \\\\ b &amp; c \\end{pmatrix}\\) is positive definite?", "a": "Both eigenvalues are positive. Equivalently \\(a &gt; 0\\) and \\(\\det = ac - b^2 &gt; 0\\). If \\(\\det &lt; 0\\), the eigenvalues have opposite signs and the matrix is indefinite."},
+ {"q": "Why is a stationary point of a convex function a global minimum?", "a": "Convexity gives \\(f(y) \\ge f(x^*) + \\nabla f(x^*)^\\top (y - x^*)\\) for all \\(y\\). With \\(\\nabla f(x^*) = 0\\) this reads \\(f(y) \\ge f(x^*)\\)."},
+ {"q": "When is \\(d_k\\) a descent direction at \\(x_k\\)?", "a": "When \\(\\nabla f(x_k)^\\top d_k &lt; 0\\). Then \\(f(x_k + \\alpha d_k) &lt; f(x_k)\\) for every small enough \\(\\alpha &gt; 0\\)."},
+ {"q": "Write the gradient descent update and explain why it is a descent method.", "a": "\\(x_{k+1} = x_k - \\alpha_k \\nabla f(x_k)\\). With \\(d_k = -\\nabla f(x_k)\\) we get \\(\\nabla f(x_k)^\\top d_k = -\\|\\nabla f(x_k)\\|^2 &lt; 0\\) whenever the gradient is nonzero."},
+ {"q": "Define \\(M\\)-smooth. What inequality does it give?", "a": "\\(\\|\\nabla f(x) - \\nabla f(y)\\| \\le M \\|x - y\\|\\). It gives the quadratic upper bound \\(f(y) \\le f(x) + \\nabla f(x)^\\top (y - x) + \\tfrac{M}{2}\\|y - x\\|^2\\)."},
+ {"q": "Define \\(m\\)-strongly convex. What inequality does it give?", "a": "\\(f(x) - \\tfrac{m}{2}\\|x\\|^2\\) is convex. It gives the quadratic lower bound \\(f(y) \\ge f(x) + \\nabla f(x)^\\top (y - x) + \\tfrac{m}{2}\\|y - x\\|^2\\)."},
+ {"q": "Rate of gradient descent with \\(\\alpha = 1/M\\) on a convex, \\(M\\)-smooth function?", "a": "Sub-linear: \\(f(x_k) - z^* \\le \\dfrac{M\\|x_0 - x^*\\|^2}{2k}\\). Reaching accuracy \\(\\varepsilon\\) takes \\(O(1/\\varepsilon)\\) iterations."},
+ {"q": "Rate of gradient descent with \\(\\alpha = 1/M\\) on an \\(m\\)-strongly convex, \\(M\\)-smooth function?", "a": "Linear: \\(f(x_k) - z^* \\le (1 - m/M)^k (f(x_0) - z^*)\\). Reaching accuracy \\(\\varepsilon\\) takes \\(O\\big(\\tfrac{M}{m} \\log \\tfrac{1}{\\varepsilon}\\big)\\) iterations."},
+ {"q": "Define linear, sub-linear, super-linear and quadratic convergence.", "a": "With \\(\\lim |z_{k+1} - z^*| / |z_k - z^*|^p = \\beta\\): linear is \\(p = 1,\\ 0 &lt; \\beta &lt; 1\\). Sub-linear is \\(p = 1,\\ \\beta = 1\\). Super-linear is \\(p = 1,\\ \\beta = 0\\). Quadratic is \\(p = 2\\)."},
+ {"q": "What is the condition number, and why does it matter for gradient descent?", "a": "For a quadratic with matrix \\(Q\\), \\(\\kappa(Q) = \\lambda_{\\max}/\\lambda_{\\min}\\). In general \\(\\kappa = M/m\\). Large \\(\\kappa\\) means long narrow valleys, zigzagging and slow convergence."},
+ {"q": "Exact line search versus backtracking line search?", "a": "Exact: choose \\(\\alpha_k\\) that minimizes \\(f(x_k + \\alpha d_k)\\). Fewer iterations, but each one solves a 1D problem. Backtracking: shrink \\(\\alpha\\) until a sufficient-decrease test passes. More iterations, cheaper each."},
+ {"q": "State the backtracking (sufficient decrease) test.", "a": "Start at \\(\\alpha = s\\). Accept \\(\\alpha\\) if \\(f(x_k + \\alpha d_k) \\le f(x_k) + \\sigma \\alpha \\nabla f(x_k)^\\top d_k\\) with \\(0 &lt; \\sigma &lt; 1/2\\). Otherwise set \\(\\alpha \\leftarrow \\beta \\alpha\\) with \\(0 &lt; \\beta &lt; 1\\) and test again."},
+ {"q": "What does diagonal scaling do?", "a": "It uses \\(x_{k+1} = x_k - \\alpha_k D \\nabla f(x_k)\\) with a positive diagonal \\(D\\). This is gradient descent after a change of units, chosen to make the problem better conditioned."},
+ {"q": "Steepest descent in the 1-norm is the same as which method?", "a": "Coordinate descent. The best unit step in the 1-norm moves along the single coordinate with the largest \\(|\\partial f / \\partial x_i|\\)."},
+ {"q": "Constant step size on \\(f(x) = \\tfrac12 x^\\top Q x - c^\\top x\\). Which \\(\\alpha\\) are stable?", "a": "The error evolves as \\(x_{k+1} - x^* = (I - \\alpha Q)(x_k - x^*)\\). It converges if and only if \\(0 &lt; \\alpha &lt; 2/\\lambda_{\\max}(Q)\\)."}
+]
+</script>
+  </div>
+</section>
+
+<section class="block" id="quiz">
+  <span class="section-badge">Exam practice</span>
+  <h2>Test yourself</h2>
+  <p>Multiple choice in the style of the midterm. On the exam you also write a one-line justification, so say yours out loud before you click.</p>
+
+  <div class="quiz">
+    <div class="q-label">Question 1 · Optimality</div>
+    <div class="q-text">Let \(f\) be differentiable and suppose \(\nabla f(x^*) = 0\). Which statement is true?</div>
+    <div class="opts">
+      <button class="opt">\(x^*\) is a global minimum.</button>
+      <button class="opt">\(x^*\) is a local minimum, not necessarily global.</button>
+      <button class="opt" data-correct>\(x^*\) is not necessarily a local minimum.</button>
+    </div>
+    <div class="feedback">A zero gradient only makes \(x^*\) a candidate. \(f(x) = x^3\) has \(f'(0) = 0\), but 0 is neither a minimum nor a maximum.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 2 · Optimality</div>
+    <div class="q-text">At a stationary point the Hessian is \(\begin{pmatrix} 2 & 3 \\ 3 & 2 \end{pmatrix}\). What is the point?</div>
+    <div class="opts">
+      <button class="opt">A strict local minimum, because the diagonal entries are positive.</button>
+      <button class="opt" data-correct>A saddle point, so not a local minimum.</button>
+      <button class="opt">We cannot say anything without more information.</button>
+    </div>
+    <div class="feedback">The determinant is \(4 - 9 = -5 &lt; 0\), so the eigenvalues (5 and \(-1\)) have opposite signs. The Hessian is indefinite, which violates the second-order necessary condition. Positive diagonal entries are not enough.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 3 · Convexity</div>
+    <div class="q-text">\(f\) is convex and differentiable, and \(\nabla f(x^*) = 0\). Then:</div>
+    <div class="opts">
+      <button class="opt" data-correct>\(x^*\) is a global minimum.</button>
+      <button class="opt">\(x^*\) is a local minimum, but we also need \(\nabla^2 f(x^*) \succ 0\) to call it global.</button>
+      <button class="opt">\(x^*\) is the unique global minimum.</button>
+    </div>
+    <div class="feedback">The convexity inequality \(f(y) \ge f(x^*) + \nabla f(x^*)^\top (y - x^*) = f(x^*)\) gives a global minimum directly. Uniqueness needs more, for example strict or strong convexity. A constant function is convex, and every point minimizes it.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 4 · Algorithm</div>
+    <div class="q-text">True or false: gradient descent is a descent algorithm, meaning \(f(x_{k+1}) &lt; f(x_k)\), provided the step size is small enough and \(\nabla f(x_k) \neq 0\).</div>
+    <div class="opts">
+      <button class="opt" data-correct>True</button>
+      <button class="opt">False</button>
+    </div>
+    <div class="feedback">By a first-order expansion, \(f(x_k - \alpha \nabla f(x_k)) \approx f(x_k) - \alpha \|\nabla f(x_k)\|^2\), which is smaller than \(f(x_k)\) for small \(\alpha &gt; 0\).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 5 · Step size</div>
+    <div class="q-text">You run gradient descent with a constant step size on a differentiable function. Which is true?</div>
+    <div class="opts">
+      <button class="opt">The larger the step size, the faster the convergence.</button>
+      <button class="opt">The smaller the step size, the faster the convergence.</button>
+      <button class="opt" data-correct>We do not know in general.</button>
+    </div>
+    <div class="feedback">Larger steps make more progress per iteration only while the first-order approximation stays accurate. Too large a step overshoots and can diverge. Too small a step crawls. The best step depends on the local curvature.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 6 · Rates</div>
+    <div class="q-text">\(f\) is convex and \(M\)-smooth, but not strongly convex. Gradient descent with \(\alpha = 1/M\) converges:</div>
+    <div class="opts">
+      <button class="opt">Linearly, with factor \(1 - 1/M\).</button>
+      <button class="opt" data-correct>Sub-linearly, with \(f(x_k) - z^* = O(1/k)\).</button>
+      <button class="opt">Quadratically once close to the optimum.</button>
+    </div>
+    <div class="feedback">The theorem gives \(f(x_k) - z^* \le M\|x_0 - x^*\|^2/(2k)\). Halving the error needs twice as many iterations, so accuracy \(\varepsilon\) takes \(O(1/\varepsilon)\) iterations.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 7 · Rates</div>
+    <div class="q-text">\(f\) is \(m\)-strongly convex and \(M\)-smooth. A variant of gradient descent guarantees \(f(x_{k+1}) - z^* \le \left(1 - \tfrac{m}{2M}\right)(f(x_k) - z^*)\). Compared with standard gradient descent with \(\alpha = 1/M\), it:</div>
+    <div class="opts">
+      <button class="opt">Converges sub-linearly, so it is slower.</button>
+      <button class="opt" data-correct>Converges linearly, but with a worse guarantee.</button>
+      <button class="opt">Converges linearly and at least as fast.</button>
+    </div>
+    <div class="feedback">The ratio of consecutive gaps is bounded by a constant below 1, so the rate is linear. The constant \(1 - m/(2M)\) is closer to 1 than \(1 - m/M\), so the guarantee is weaker.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 8 · Stability</div>
+    <div class="q-text">Gradient descent with a constant step on \(f(x) = \tfrac12 x^\top Q x\), where the eigenvalues of \(Q\) are 1 and 10. Which step size makes the iterates diverge from most starting points?</div>
+    <div class="opts">
+      <button class="opt">\(\alpha = 0.05\)</button>
+      <button class="opt">\(\alpha = 0.15\)</button>
+      <button class="opt" data-correct>\(\alpha = 0.25\)</button>
+    </div>
+    <div class="feedback">The error is multiplied by \(I - \alpha Q\) each step, with eigenvalues \(1 - \alpha\) and \(1 - 10\alpha\). Stability needs \(|1 - 10\alpha| &lt; 1\), so \(\alpha &lt; 2/10 = 0.2\). At \(\alpha = 0.25\) the factor is \(-1.5\), and that component grows.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 9 · Conditioning</div>
+    <div class="q-text">You minimize \(f(x) = \tfrac12 x^\top Q x - c^\top x\) with \(Q = 4I\) using gradient descent with exact line search. How many iterations does it take?</div>
+    <div class="opts">
+      <button class="opt" data-correct>One, from any starting point.</button>
+      <button class="opt">About \(\log(1/\varepsilon)\).</button>
+      <button class="opt">It depends on how far \(x_0\) is from \(x^*\).</button>
+    </div>
+    <div class="feedback">With \(\kappa(Q) = 1\) the level sets are circles, so \(-\nabla f(x_0)\) points straight at \(x^*\). Exact line search stops exactly there. The Kantorovich factor \(\left(\tfrac{\kappa - 1}{\kappa + 1}\right)^2\) equals 0.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 10 · Scaling</div>
+    <div class="q-text">One variable is measured in kilometres and another in millimetres. Gradient descent zigzags badly. The cleanest fix from the lecture is to:</div>
+    <div class="opts">
+      <button class="opt">Use a much smaller constant step size.</button>
+      <button class="opt" data-correct>Use scaled gradient descent \(x_{k+1} = x_k - \alpha_k D \nabla f(x_k)\) with a diagonal \(D\) that puts both variables on comparable scales.</button>
+      <button class="opt">Switch to the 1-norm steepest descent direction.</button>
+    </div>
+    <div class="feedback">Diagonal scaling is a change of units. It shrinks the condition number of the Hessian. A smaller step only makes the zigzag slower.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 11 · Steepest descent</div>
+    <div class="q-text">Steepest descent with respect to the 1-norm, \(d_k \in \arg\min\{\nabla f(x_k)^\top v : \|v\|_1 = 1\}\), is equivalent to:</div>
+    <div class="opts">
+      <button class="opt">Ordinary gradient descent.</button>
+      <button class="opt">Scaled gradient descent with \(D = I\).</button>
+      <button class="opt" data-correct>Coordinate descent: move one variable at a time.</button>
+    </div>
+    <div class="feedback">Over the 1-norm ball, a linear function is minimized at a corner, \(\pm e_i\). The best corner is the coordinate with the largest \(|\partial f/\partial x_i|\). The 2-norm gives ordinary gradient descent.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 12 · Regression</div>
+    <div class="q-text">Ridge regression minimizes \(f(\beta) = \tfrac12 \|y - X\beta\|^2 + \tfrac{\lambda}{2}\|\beta\|^2\) with \(\lambda &gt; 0\). Which statement is true?</div>
+    <div class="opts">
+      <button class="opt">It may have several local minima, so gradient descent might get stuck.</button>
+      <button class="opt" data-correct>Its Hessian \(X^\top X + \lambda I\) is positive definite, so the unique stationary point is the global minimum.</button>
+      <button class="opt">It is convex only if \(X\) has full column rank.</button>
+    </div>
+    <div class="feedback">\(u^\top (X^\top X + \lambda I) u = \|Xu\|^2 + \lambda \|u\|^2 &gt; 0\) for \(u \neq 0\), whatever the rank of \(X\). Setting the gradient to zero gives \(\beta^* = (X^\top X + \lambda I)^{-1} X^\top y\).</div>
+  </div>
+
+  <p class="quiz-score" aria-live="polite"></p>
+</section>
+
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 18 · Boyd and Vandenberghe, Convex Optimization, 9.1 to 9.4</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

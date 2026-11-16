@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18d Step sizes, initialization and scaling · Opti</title>
+<meta name="description" content="Constant, diminishing, exact and backtracking step sizes, the role of the starting point, the condition number, diagonal scaling and steepest descent in other norms.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="widgets.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 18: Gradient descent</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 18 · Part d</p>
+  <h1>Step sizes, starts <em>and scaling</em></h1>
+  <p class="lede">The theorems assume \(\alpha = 1/M\), but in practice nobody hands you \(M\). This part is about the choices that decide whether gradient descent takes twenty iterations or twenty thousand.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#tradeoff">The step-size trade-off</a></li>
+      <li><a href="#rules">Four step-size rules</a></li>
+      <li><a href="#playground">Playground</a></li>
+      <li><a href="#init">The starting point</a></li>
+      <li><a href="#condition">The condition number</a></li>
+      <li><a href="#scaling">Diagonal scaling</a></li>
+      <li><a href="#steepest">Steepest descent in other norms</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="tradeoff">
+    <h2>The step-size trade-off</h2>
+    <p>Every step-size choice balances two failure modes:</p>
+    <ul>
+      <li><strong>Too small:</strong> each iteration makes little progress, and convergence is slow.</li>
+      <li><strong>Too large:</strong> the first-order approximation stops being accurate, the iterate overshoots, and the method can oscillate or diverge.</li>
+    </ul>
+    <p>Somewhere in between, convergence is fastest. Where exactly depends on the local curvature of \(f\), which changes from point to point and from direction to direction.</p>
+    <details class="more"><summary>Beyond the slides: the exact stability limit for a quadratic</summary><div>
+      <p>For \(f(x) = \tfrac12 x^\top Q x - c^\top x\) with \(Q \succ 0\), the gradient is \(Qx - c = Q(x - x^*)\). A constant step gives</p>
+      <div class="math-block">\[ x_{k+1} - x^* = (I - \alpha Q)(x_k - x^*). \]</div>
+      <p>Along each eigenvector of \(Q\) with eigenvalue \(\lambda_i\), the error is multiplied by \(1 - \alpha\lambda_i\) every step. It shrinks if and only if \(|1 - \alpha\lambda_i| &lt; 1\), so the method converges from every start exactly when \(0 &lt; \alpha &lt; 2/\lambda_{\max}\). The best constant step is \(\alpha = 2/(\lambda_{\min} + \lambda_{\max})\), which balances the slowest and the fastest direction. Its error factor is \((\kappa - 1)/(\kappa + 1)\).</p>
+    </div></details>
+  </section>
+
+  <section class="block" id="rules">
+    <h2>Four step-size rules</h2>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Constant">
+        <div class="math-block">\[ \alpha_k = s \quad \text{for all } k. \]</div>
+        <p>Simplest possible. Works well if \(s\) is tuned to the problem, for example \(s = 1/M\) when \(M\) is known. Too large and it diverges. Too small and it crawls.</p>
+      </div>
+      <div class="tab-panel" data-tab="Diminishing">
+        <div class="math-block">\[ \alpha_k \to 0 \qquad \text{and} \qquad \sum_{k=0}^\infty \alpha_k = \infty. \]</div>
+        <p>For example \(\alpha_k = 1/k\). The steps shrink, so the method eventually settles down. But not too fast: the infinite sum ensures the iterates can still travel any distance. This rule becomes important for stochastic gradient descent in class 20.</p>
+      </div>
+      <div class="tab-panel" data-tab="Exact line search">
+        <div class="math-block">\[ \alpha_k \in \arg\min_{\alpha \ge 0} f(x_k + \alpha d_k). \]</div>
+        <p>Go as far along the direction as is useful, and stop exactly where \(f\) is lowest on that line. Best possible progress per iteration, but each iteration solves a one-dimensional optimization problem (for example by bisection). For a quadratic there is a closed form.</p>
+      </div>
+      <div class="tab-panel" data-tab="Backtracking">
+        <p>Start with a trial step \(\alpha = s\). Accept it if it gives a sufficient decrease:</p>
+        <div class="math-block">\[ f(x_k + \alpha d_k) \le f(x_k) + \sigma\,\alpha\,\nabla f(x_k)^\top d_k, \qquad 0 &lt; \sigma &lt; \tfrac12. \]</div>
+        <p>Otherwise shrink it, \(\alpha \leftarrow \beta\alpha\) with \(0 &lt; \beta &lt; 1\), and test again. The accepted step is \(\alpha_k = s\beta^{m_k}\), where \(m_k\) is the number of shrinks. The test asks for a decrease of at least a fraction \(\sigma\) of what the tangent line promises, which rules out steps that barely help.</p>
+      </div>
+    </div>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th></th><th>Exact line search</th><th>Backtracking line search</th></tr></thead>
+      <tbody>
+        <tr><td>Progress per iteration</td><td>Best possible along the direction</td><td>Some guaranteed progress</td></tr>
+        <tr><td>Number of iterations</td><td>Fewer</td><td>More</td></tr>
+        <tr><td>Work per iteration</td><td>More: a 1D optimization</td><td>Less: a few function evaluations</td></tr>
+      </tbody>
+    </table></div>
+    <p>The lecture's numbers make the point. On \(f = 5x_1^2 + x_2^2 + 4x_1x_2 - 14x_1 - 6x_2 + 20\), exact line search needs 20 iterations against 363 for a constant step of 0.1. On the Rosenbrock function, backtracking needs 6,890 iterations against 28,855 for a constant step.</p>
+  </section>
+
+  <section class="block" id="playground">
+    <h2>Playground</h2>
+    <div class="widget" data-widget="playground" data-fn="lec">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Gradient descent on contour plots</h4><p>Pick a function and a step-size rule. Click on the plot to start from a new point. The cross marks the minimum. Iterations stop when \(\|\nabla f\| &lt; 10^{-4}\), so counts can differ from the slides, which use their own stopping rule.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>Things to try:</p>
+    <ul>
+      <li>On the lecture example, switch between <em>Constant step</em> and <em>Exact line search</em>. Then push the constant step above 0.17 and watch it diverge, since \(2/\lambda_{\max} \approx 0.17\) here.</li>
+      <li>Compare the well-conditioned and ill-conditioned quadratics with exact line search. Same algorithm, very different paths.</li>
+      <li>On Rosenbrock, notice how quickly the iterates reach the curved valley, and how slowly they then crawl along it.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="init">
+    <h2>The starting point</h2>
+    <p>For a convex function, the starting point only affects how long the trip takes. For a non-convex function it can decide where the trip ends. Gradient descent finds a stationary point near where it starts, and that may be a poor local minimum.</p>
+    <div class="widget" data-widget="playground" data-fns="wells" data-noscale>
+      <div class="widget-head"><span class="label">Interactive</span><h4>Two valleys</h4><p>Click on the left half and on the right half of the plot. Watch which minimum each start reaches.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>A simple remedy from the lecture: run the algorithm in parallel from several starting points and keep the best result. Step size and starting point can also be tuned together. A larger step sometimes jumps over a shallow local minimum that a small step would get stuck in, though with no guarantee.</p>
+  </section>
+
+  <section class="block" id="condition">
+    <h2>The condition number</h2>
+    <div class="box">
+      <span class="label">Definition</span>
+      <p>For a symmetric positive definite matrix \(Q\), the condition number is the ratio of its largest to its smallest eigenvalue:</p>
+      <div class="math-block">\[ \kappa(Q) = \frac{\lambda_{\max}(Q)}{\lambda_{\min}(Q)} \ge 1. \]</div>
+    </div>
+    <div class="box theorem">
+      <span class="label">Theorem (Kantorovich)</span>
+      <p>If \(f(x) = \tfrac12 x^\top Q x - c^\top x + b\) with \(Q \succ 0\), and gradient descent uses exact line search, then</p>
+      <div class="math-block">\[ f(x_{k+1}) - z^* \le \left( \frac{\kappa(Q) - 1}{\kappa(Q) + 1} \right)^2 \big(f(x_k) - z^*\big). \]</div>
+    </div>
+    <p>Two matrices from the lecture show how much this matters:</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>\(Q\)</th><th>\(\kappa(Q)\)</th><th>Factor per iteration</th><th>Character</th></tr></thead>
+      <tbody>
+        <tr><td>\(\begin{pmatrix} 20 & 5 \\ 5 & 16 \end{pmatrix}\)</td><td>1.85</td><td>\(\approx 0.09\)</td><td>Well-conditioned. Each step removes about 91% of the gap.</td></tr>
+        <tr><td>\(\begin{pmatrix} 20 & 5 \\ 5 & 2 \end{pmatrix}\)</td><td>30.2</td><td>\(\approx 0.88\)</td><td>Ill-conditioned. Each step removes only about 12% of the gap.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Why zigzag?">
+        <p>With large \(\kappa\) the level sets are long, thin ellipses. The gradient is perpendicular to the level set, so it points mostly <em>across</em> the valley rather than <em>along</em> it. With exact line search, each new gradient is perpendicular to the previous step, so the path turns 90 degrees at every iteration. The result is a zigzag that makes slow progress down the valley.</p>
+      </div>
+      <div class="tab-panel" data-tab="Link to part c">
+        <p>Beyond quadratics, the same role is played by the condition number of the Hessian. The linear rate of part c has constant \(c = 1 - m/M\), and \(M/m\) bounds the condition number of \(\nabla^2 f(x)\) everywhere. Large \(\kappa\) means \(c\) close to 1, which means slow convergence, whichever step-size rule you use.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="scaling">
+    <h2>Diagonal scaling</h2>
+    <p>Bad conditioning often comes from bad units. If \(x_1\) is a length in kilometres and \(x_2\) a similar length in millimetres, the function is extremely steep in one variable and flat in the other, for no good reason. Change units and the problem becomes easy.</p>
+    <p>Formally, substitute \(x = Sy\) for a nonsingular diagonal \(S\), and run gradient descent on \(g(y) = f(Sy)\). Since \(\nabla g(y) = S^\top \nabla f(Sy)\),</p>
+    <div class="math-block">\[ y_{k+1} = y_k - \alpha_k S^\top \nabla f(Sy_k) \quad\Longrightarrow\quad Sy_{k+1} = Sy_k - \alpha_k S S^\top \nabla f(Sy_k). \]</div>
+    <p>Back in the original variables this is <strong>scaled gradient descent</strong>:</p>
+    <div class="math-block">\[ x_{k+1} = x_k - \alpha_k D \nabla f(x_k), \qquad D = SS^\top \succ 0 \text{ diagonal}. \]</div>
+    <p>The lecture's example: \(f(x) = 500x_1^2 + 20x_1x_2 + 0.5x_2^2\), so \(Q = \begin{pmatrix} 1000 & 20 \\ 20 & 1 \end{pmatrix}\) with \(\kappa(Q) \approx 1{,}668\). Choosing \(D = \mathrm{diag}(1/1000, 1)\), which divides each variable by its own curvature, gives \(\kappa(D^{1/2}QD^{1/2}) \approx 4.4\). On the slides, plain gradient descent takes 68 iterations and scaled gradient descent 20.</p>
+    <div class="widget" data-widget="playground" data-fns="scale,bad" data-rule="exact">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Turn scaling on and off</h4><p>Exact line search on the badly scaled function. Tick the scaling box and compare the path and the iteration count.</p></div>
+      <div class="widget-body"></div>
+    </div>
+  </section>
+
+  <section class="block" id="steepest">
+    <h2>Steepest descent in other norms</h2>
+    <p>Part b showed that \(-\nabla f\) is the steepest direction when "length" means the Euclidean norm. Choose a different norm and you get a different method.</p>
+    <div class="box">
+      <span class="label">Definition (steepest descent)</span>
+      <p>For any norm \(\|\cdot\|\), the steepest descent direction is</p>
+      <div class="math-block">\[ d_k \in \arg\min\big\{ \nabla f(x_k)^\top v : \|v\| = 1 \big\}, \]</div>
+      <p>the unit-length direction with the largest first-order decrease, since \(f(x + v) \approx f(x) + \nabla f(x)^\top v\).</p>
+    </div>
+    <div class="widget" data-widget="steepest">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Unit balls and the steepest direction</h4><p>The arrow \(\nabla f\) is fixed by the angle slider. The steepest descent direction is the point of the unit ball that goes furthest against the gradient: where the ball touches the dashed line furthest in the \(-\nabla f\) direction.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Norm</th><th>Steepest direction</th><th>Method</th></tr></thead>
+      <tbody>
+        <tr><td>\(\|v\|_2\)</td><td>\(-\nabla f(x_k)/\|\nabla f(x_k)\|\)</td><td>Gradient descent (by Cauchy-Schwarz)</td></tr>
+        <tr><td>\(\|v\|_P = \sqrt{v^\top P v}\), \(P \succ 0\)</td><td>Proportional to \(-P^{-1}\nabla f(x_k)\)</td><td>Scaled gradient descent with \(D = P^{-1}\)</td></tr>
+        <tr><td>\(\|v\|_1\)</td><td>\(-\mathrm{sign}\big(\tfrac{\partial f}{\partial x_i}\big) e_i\) for the \(i\) with the largest \(\big|\tfrac{\partial f}{\partial x_i}\big|\)</td><td>Coordinate descent: one variable at a time</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Step size: too small is slow, too large is unstable. Constant, diminishing, exact line search and backtracking are the standard rules.</li>
+      <li>Exact line search: fewer, more expensive iterations. Backtracking: more, cheaper iterations.</li>
+      <li>Non-convex \(f\): the start decides which local minimum you reach. Use several starts.</li>
+      <li>The condition number \(\kappa\) controls speed. Large \(\kappa\) means narrow valleys and zigzagging.</li>
+      <li>Diagonal scaling is a change of units that reduces \(\kappa\). Steepest descent in the \(P\)-norm is scaled gradient descent, and in the 1-norm it is coordinate descent.</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>"The larger the step size, the faster the convergence" is a favourite statement to judge. The right answer is that we do not know in general: larger steps help only while the function keeps decreasing along the direction.</p>
+      <p>You may also be shown contour plots with iterate paths and asked to match each to a method. A zigzag across a narrow valley is gradient descent. Wobbly, noisy paths are stochastic gradient descent (class 20). Very few, direct steps are Newton's method (class 19).</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">You use backtracking with \(s = 1\), \(\beta = 0.5\). The test fails for \(\alpha = 1\) and \(\alpha = 0.5\), and passes for \(\alpha = 0.25\). What is \(\alpha_k\)?</div>
+      <div class="opts">
+        <button class="opt">1</button>
+        <button class="opt" data-correct>0.25</button>
+        <button class="opt">The \(\alpha\) that minimizes \(f\) along the direction</button>
+      </div>
+      <div class="feedback">Backtracking accepts the first trial step that passes: \(\alpha_k = s\beta^2 = 0.25\). It does not look for the best step. That is exact line search.</div>
+    </div>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">\(f(x) = 50x_1^2 + 0.5x_2^2\). Which diagonal \(D\) makes scaled gradient descent best conditioned?</div>
+      <div class="opts">
+        <button class="opt">\(D = \mathrm{diag}(100, 1)\)</button>
+        <button class="opt" data-correct>\(D = \mathrm{diag}(1/100, 1)\)</button>
+        <button class="opt">\(D = I\)</button>
+      </div>
+      <div class="feedback">The Hessian is \(\mathrm{diag}(100, 1)\), with \(\kappa = 100\). Dividing each coordinate by its curvature gives \(D^{1/2} Q D^{1/2} = I\), with \(\kappa = 1\). Multiplying by 100 would make things far worse.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="convergence.html"><small>Previous · 18c</small>Convergence guarantees</a>
+    <a class="next" href="./#flashcards"><small>Finish with</small>Flashcards and practice questions</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 18, slides 26 to 30 and appendix · Boyd and Vandenberghe 9.2 to 9.4</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

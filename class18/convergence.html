@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18c Convergence guarantees · Opti</title>
+<meta name="description" content="Smoothness, strong convexity and the two convergence theorems for gradient descent, with the proof explained step by step.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="widgets.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 18: Gradient descent</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 18 · Part c</p>
+  <h1>Convergence <em>guarantees</em></h1>
+  <p class="lede">Gradient descent works, but how well? Two assumptions about the shape of \(f\) turn vague hope into exact iteration counts. Both come down to squeezing \(f\) between two parabolas.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#assumptions">Two shape assumptions</a></li>
+      <li><a href="#sandwich">The quadratic sandwich</a></li>
+      <li><a href="#convex">Rate under convexity</a></li>
+      <li><a href="#strong">Rate under strong convexity</a></li>
+      <li><a href="#proof">The proof, step by step</a></li>
+      <li><a href="#kappa">What drives the speed</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="assumptions">
+    <h2>Two shape assumptions</h2>
+    <p>Without assumptions, nothing useful can be said: \(f\) could have a cliff right next to a flat plain, and no fixed step size would suit both. The lecture uses two standard conditions.</p>
+    <div class="box">
+      <span class="label">Definition · smoothness</span>
+      <p>\(f\) is <strong>\(M\)-smooth</strong> if its gradient is \(M\)-Lipschitz continuous:</p>
+      <div class="math-block">\[ \|\nabla f(x) - \nabla f(y)\| \le M \|x - y\| \quad \text{for all } x, y. \]</div>
+    </div>
+    <p>The gradient cannot change too quickly, so the function cannot bend upward too sharply. For a twice differentiable \(f\) this is the same as \(\nabla^2 f(x) \preceq M I\) everywhere: no eigenvalue of the Hessian exceeds \(M\). Smoothness is an upper limit on curvature.</p>
+    <div class="box">
+      <span class="label">Definition · strong convexity</span>
+      <p>\(f\) is <strong>\(m\)-strongly convex</strong> if</p>
+      <div class="math-block">\[ f(x) - \frac{m}{2}\|x\|^2 \quad \text{is convex.} \]</div>
+    </div>
+    <p>Even after you subtract a bowl of curvature \(m\), what remains still curves upward. For a twice differentiable \(f\) this means \(\nabla^2 f(x) \succeq m I\) everywhere: every eigenvalue of the Hessian is at least \(m\). Strong convexity is a lower limit on curvature, and rules out flat regions.</p>
+    <div class="callout">
+      <span class="label">In one sentence</span>
+      <p>The curvature of \(f\), in every direction and at every point, lies between \(m\) and \(M\). For a quadratic \(f(x) = \tfrac12 x^\top Q x - c^\top x\), these are just \(m = \lambda_{\min}(Q)\) and \(M = \lambda_{\max}(Q)\).</p>
+    </div>
+  </section>
+
+  <section class="block" id="sandwich">
+    <h2>The quadratic sandwich</h2>
+    <p>The two definitions translate into the two inequalities that the proofs actually use (the lecture proves both in its appendix):</p>
+    <div class="box theorem">
+      <span class="label">Upper bound from \(M\)-smoothness</span>
+      <div class="math-block">\[ f(y) \le f(x) + \nabla f(x)^\top (y - x) + \frac{M}{2}\|y - x\|^2 \quad \text{for all } x, y. \]</div>
+      <span class="label" style="margin-top:12px">Lower bound from \(m\)-strong convexity</span>
+      <div class="math-block">\[ f(y) \ge f(x) + \nabla f(x)^\top (y - x) + \frac{m}{2}\|y - x\|^2 \quad \text{for all } x, y. \]</div>
+    </div>
+    <p>Stand at any point \(x\). Draw the tangent line, then bend it up by \(\tfrac{M}{2}\|y - x\|^2\) and by \(\tfrac{m}{2}\|y - x\|^2\). The function is trapped between the two parabolas everywhere. Plain convexity is the case \(m = 0\): the tangent itself is the lower bound.</p>
+
+    <div class="widget" data-widget="sandwich">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Squeezing \(f\) between two parabolas</h4><p>Here \(f(x) = \tfrac12 x^2 + 3\log\cosh(x - 0.8)\), whose curvature ranges from 1 to 4, so \(m = 1\) and \(M = 4\). Move the point, press the step button a few times, then try a value of \(M\) that is too small.</p></div>
+      <div class="widget-body"></div>
+    </div>
+
+    <p>The widget shows why step size \(1/M\) is the natural choice. The upper parabola is a simple quadratic model of \(f\), and its minimizer is exactly</p>
+    <div class="math-block">\[ \arg\min_y \Big\{ f(x) + \nabla f(x)^\top (y - x) + \frac{M}{2}\|y - x\|^2 \Big\} = x - \frac{1}{M}\nabla f(x). \]</div>
+    <p>So gradient descent with \(\alpha = 1/M\) means: minimize the upper bound, and move there. Since \(f\) lies below the bound, \(f\) drops at least as much as the bound promises.</p>
+  </section>
+
+  <section class="block" id="convex">
+    <h2>Rate under convexity: sub-linear</h2>
+    <div class="box theorem">
+      <span class="label">Theorem (convex and smooth)</span>
+      <p>Let \(f\) be \(M\)-smooth and convex. Gradient descent with constant step size \(\alpha = 1/M\) satisfies</p>
+      <div class="math-block">\[ f(x_k) - z^* \le \frac{1}{2\alpha k}\|x_0 - x^*\|^2 = \frac{M\|x_0 - x^*\|^2}{2k}, \qquad k \ge 1. \]</div>
+    </div>
+    <ul>
+      <li>The gap shrinks like a constant divided by \(k\), so the convergence is <strong>sub-linear</strong>.</li>
+      <li>To guarantee \(f(x_k) - z^* \le \varepsilon\), it is enough to run \(k \ge \dfrac{\|x_0 - x^*\|^2}{2\alpha\varepsilon}\) iterations, that is \(O(1/\varepsilon)\).</li>
+      <li>A poor start (large \(\|x_0 - x^*\|\)) and a tight tolerance (small \(\varepsilon\)) both cost iterations in direct proportion.</li>
+    </ul>
+    <details class="more"><summary>Proof (from the lecture appendix)</summary><div>
+      <p><strong>1. One step makes progress.</strong> Use the smoothness bound with \(y = x_{k+1} = x_k - \alpha\nabla f(x_k)\) and \(\alpha = 1/M\):</p>
+      <div class="math-block">\[ f(x_{k+1}) \le f(x_k) - \frac{\alpha}{2}\|\nabla f(x_k)\|^2. \]</div>
+      <p><strong>2. Compare with the optimum.</strong> Convexity gives \(f(x^*) \ge f(x_k) + \nabla f(x_k)^\top (x^* - x_k)\). Combine with step 1 and use \(\nabla f(x_k) = (x_k - x_{k+1})/\alpha\). After expanding the squares:</p>
+      <div class="math-block">\[ f(x_{k+1}) - z^* \le \frac{1}{2\alpha}\left( \|x_k - x^*\|^2 - \|x_{k+1} - x^*\|^2 \right). \]</div>
+      <p><strong>3. Telescope.</strong> Sum over \(i = 1, \dots, k\). The right side collapses to at most \(\tfrac{1}{2\alpha}\|x_0 - x^*\|^2\). Since the values decrease monotonically, the left sum is at least \(k(f(x_k) - z^*)\). Divide by \(k\).</p>
+    </div></details>
+  </section>
+
+  <section class="block" id="strong">
+    <h2>Rate under strong convexity: linear</h2>
+    <div class="box theorem">
+      <span class="label">Theorem (strongly convex and smooth)</span>
+      <p>Let \(f\) be \(M\)-smooth and \(m\)-strongly convex. Gradient descent with constant step size \(\alpha = 1/M\) satisfies</p>
+      <div class="math-block">\[ f(x_k) - z^* \le \left(1 - \frac{m}{M}\right)^k \big(f(x_0) - z^*\big), \qquad k \ge 0. \]</div>
+    </div>
+    <ul>
+      <li>The gap is multiplied by at most \(c = 1 - m/M &lt; 1\) at every step: <strong>linear</strong> convergence.</li>
+      <li>Accuracy \(\varepsilon\) takes \(O\!\left(\tfrac{M}{m}\log\tfrac{1}{\varepsilon}\right)\) iterations. Tightening the tolerance from \(10^{-3}\) to \(10^{-6}\) only doubles the work, while in the sub-linear case it multiplies it by 1,000.</li>
+      <li>The ratio \(M/m\) now matters a lot. If \(M/m\) is large, \(c\) is close to 1 and each step barely helps.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="proof">
+    <h2>The proof, step by step</h2>
+    <p>This proof is short and uses only the two sandwich inequalities, so it is worth knowing by heart.</p>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Step 1 · upper bound">
+        <p><strong>Progress per step, from smoothness.</strong> Plug \(y = x_{k+1} = x_k - \alpha\nabla f(x_k)\) into the upper bound:</p>
+        <div class="math-block">\[ \begin{aligned} f(x_{k+1}) &\le f(x_k) + \nabla f(x_k)^\top (x_{k+1} - x_k) + \tfrac{M}{2}\|x_{k+1} - x_k\|^2 \\ &= f(x_k) - \alpha\|\nabla f(x_k)\|^2 + \tfrac{M\alpha^2}{2}\|\nabla f(x_k)\|^2 \\ &= f(x_k) - \tfrac{1}{2M}\|\nabla f(x_k)\|^2 \qquad (\alpha = 1/M). \end{aligned} \]</div>
+        <p>In words: each step lowers \(f\) by at least \(\|\nabla f(x_k)\|^2/(2M)\). A large gradient guarantees a large decrease.</p>
+      </div>
+      <div class="tab-panel" data-tab="Step 2 · lower bound">
+        <p><strong>How far from optimal can we be, from strong convexity.</strong> The lower bound holds for every \(y\). Minimize both sides over \(y\). The left side becomes \(z^*\). The right side is a parabola in \(y\), minimized at \(y = x_k - \tfrac{1}{m}\nabla f(x_k)\):</p>
+        <div class="math-block">\[ z^* \ge f(x_k) - \frac{1}{2m}\|\nabla f(x_k)\|^2. \]</div>
+        <p>Rearranged: \(\|\nabla f(x_k)\|^2 \ge 2m\,(f(x_k) - z^*)\). In words: if you are far from optimal in value, the gradient must be large. Strong convexity rules out long, nearly flat approaches to the minimum.</p>
+      </div>
+      <div class="tab-panel" data-tab="Step 3 · combine">
+        <p><strong>Chain the two.</strong> Subtract \(z^*\) from step 1 and insert step 2:</p>
+        <div class="math-block">\[ f(x_{k+1}) - z^* \le f(x_k) - z^* - \frac{1}{2M}\|\nabla f(x_k)\|^2 \le \left(1 - \frac{m}{M}\right)(f(x_k) - z^*). \]</div>
+        <p>Apply this \(k\) times (telescoping) to get \(f(x_k) - z^* \le (1 - m/M)^k (f(x_0) - z^*)\).</p>
+        <p class="muted">The logic in one line: a big gap forces a big gradient (step 2), and a big gradient forces a big decrease (step 1).</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="kappa">
+    <h2>What drives the speed</h2>
+    <p>The ratio \(\kappa = M/m\) is the <strong>condition number</strong> of \(f\). It measures how different the curvature is across directions. \(\kappa = 1\) means a perfectly round bowl. Large \(\kappa\) means a long, narrow valley.</p>
+    <div class="widget" data-widget="iterations">
+      <div class="widget-head"><span class="label">Interactive</span><h4>How many iterations does the guarantee promise?</h4><p>Change the condition number and the tolerance. Compare the strongly convex guarantee with the convex-only one.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>The lecture lists four drivers of performance:</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Driver</th><th>Effect</th></tr></thead>
+      <tbody>
+        <tr><td>Initial point \(x_0\)</td><td>The further from \(x^*\), the more iterations. Enters through \(\|x_0 - x^*\|^2\) or \(f(x_0) - z^*\).</td></tr>
+        <tr><td>Step size \(\alpha\)</td><td>Larger is faster, but only up to a point. Beyond about \(2/M\) the method can diverge. Part d.</td></tr>
+        <tr><td>Tolerance \(\varepsilon\)</td><td>Smaller is slower: \(1/\varepsilon\) in the convex case, \(\log(1/\varepsilon)\) in the strongly convex case.</td></tr>
+        <tr><td>The function \(f\)</td><td>Through \(c = 1 - m/M = 1 - 1/\kappa\). Ill-conditioned problems converge slowly.</td></tr>
+      </tbody>
+    </table></div>
+    <p>Ridge regression illustrates the last row. The Hessian is \(X^\top X + \lambda I\), so \(m = \lambda_{\min}(X^\top X) + \lambda\) and \(M = \lambda_{\max}(X^\top X) + \lambda\). Increasing \(\lambda\) raises both by the same amount, which pushes \(M/m\) towards 1. More regularization makes the problem better conditioned, and gradient descent faster.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>\(M\)-smooth: curvature at most \(M\), quadratic upper bound. \(m\)-strongly convex: curvature at least \(m\), quadratic lower bound.</li>
+      <li>Step size \(1/M\) minimizes the upper bound at each step.</li>
+      <li>Convex and \(M\)-smooth: \(f(x_k) - z^* \le M\|x_0 - x^*\|^2/(2k)\). Sub-linear, \(O(1/\varepsilon)\).</li>
+      <li>Also \(m\)-strongly convex: \(f(x_k) - z^* \le (1 - m/M)^k (f(x_0) - z^*)\). Linear, \(O(\kappa\log(1/\varepsilon))\).</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>Expect to compare two guarantees. If an algorithm satisfies \(f(x_{k+1}) - z^* \le (1 - \gamma\, m/M)(f(x_k) - z^*)\) with \(0 &lt; \gamma &lt; 1\), its rate is still linear, because the limit of the ratio is a constant below 1. But its constant is larger than \(1 - m/M\), so the guarantee is weaker than plain gradient descent with \(\alpha = 1/M\).</p>
+      <p>You may also be asked to reproduce the three-step proof above, or to say which rate applies when strong convexity is missing.</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">\(f(x) = 2x_1^2 + 8x_2^2\). What are the smallest valid \(M\) and the largest valid \(m\)?</div>
+      <div class="opts">
+        <button class="opt">\(M = 8,\ m = 2\)</button>
+        <button class="opt" data-correct>\(M = 16,\ m = 4\)</button>
+        <button class="opt">\(M = 16,\ m = 0\)</button>
+      </div>
+      <div class="feedback">The Hessian is \(\mathrm{diag}(4, 16)\), so the curvature ranges from 4 to 16. Careful with the factor 2: \(\partial^2 (2x_1^2)/\partial x_1^2 = 4\). The condition number is 4.</div>
+    </div>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">With \(m = 1\) and \(M = 100\), roughly how many iterations does the linear guarantee need to cut the gap by a factor \(e \approx 2.7\)?</div>
+      <div class="opts">
+        <button class="opt">About 1</button>
+        <button class="opt">About 10</button>
+        <button class="opt" data-correct>About 100</button>
+      </div>
+      <div class="feedback">\((1 - 1/100)^k \approx e^{-k/100}\), so \(k \approx 100 = \kappa\) iterations per factor of \(e\). This is where \(O(\kappa \log(1/\varepsilon))\) comes from.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="gradient-descent.html"><small>Previous · 18b</small>The gradient descent algorithm</a>
+    <a class="next" href="step-sizes.html"><small>Next · 18d</small>Step sizes, initialization and scaling</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 18, slides 18 to 21 and appendix · Boyd and Vandenberghe 9.1.2 and 9.3</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

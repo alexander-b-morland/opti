@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18b The gradient descent algorithm · Opti</title>
+<meta name="description" content="Descent directions, the gradient descent update rule, and how to measure the speed of an iterative algorithm.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="widgets.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 18: Gradient descent</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 18 · Part b</p>
+  <h1>The gradient descent <em>algorithm</em></h1>
+  <p class="lede">Part a told us to look for points where the gradient vanishes. This part builds the simplest machine that finds them, and the vocabulary for saying how fast it gets there.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#descent">A generic descent method</a></li>
+      <li><a href="#gd">Gradient descent</a></li>
+      <li><a href="#watch">Watch it step</a></li>
+      <li><a href="#regression">Gradient descent for regression</a></li>
+      <li><a href="#rates">Rates of convergence</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="descent">
+    <h2>A generic descent method</h2>
+    <p>Since we cannot solve \(\nabla f(x) = 0\) by hand for most functions, we improve a guess step by step. Every method in classes 18 to 20 fits this template:</p>
+    <div class="algo">
+      <span class="label">Algorithm · generic descent method</span>
+      <ol>
+        <li>Choose a starting point \(x_0 \in \mathbb{R}^n\). Set \(k = 0\).</li>
+        <li>Repeat until a stopping criterion holds, for example \(\|\nabla f(x_k)\| \le \varepsilon\):
+          <ol>
+            <li>Pick a <strong>descent direction</strong> \(d_k\), meaning \(\nabla f(x_k)^\top d_k &lt; 0\).</li>
+            <li>Pick a <strong>step size</strong> \(\alpha_k &gt; 0\).</li>
+            <li>Update \(x_{k+1} = x_k + \alpha_k d_k\).</li>
+            <li>Set \(k \leftarrow k + 1\).</li>
+          </ol>
+        </li>
+      </ol>
+    </div>
+    <p>Why does \(\nabla f(x_k)^\top d_k &lt; 0\) guarantee progress? By the first-order Taylor expansion,</p>
+    <div class="math-block">\[ f(x_k + \alpha_k d_k) \approx f(x_k) + \alpha_k \underbrace{\nabla f(x_k)^\top d_k}_{&lt; 0} &lt; f(x_k). \]</div>
+    <p>The approximation is accurate when \(\alpha_k\) is small. So any direction that makes an acute angle with \(-\nabla f(x_k)\) lowers \(f\), as long as the step is short enough. Methods differ in two choices: which direction (gradient, Newton, stochastic gradient) and which step size.</p>
+    <p>The questions for any such method are always the same. Does it converge to a stationary point? Under which conditions? At what rate?</p>
+  </section>
+
+  <section class="block" id="gd">
+    <h2>Gradient descent</h2>
+    <p>The most natural descent direction is the negative gradient itself.</p>
+    <div class="algo">
+      <span class="label">Algorithm · gradient descent</span>
+      <ol>
+        <li>Choose \(x_0\). Set \(k = 0\).</li>
+        <li>Repeat until a stopping criterion holds:
+          <ol>
+            <li>\(d_k = -\nabla f(x_k)\).</li>
+            <li>Pick a step size \(\alpha_k &gt; 0\).</li>
+            <li>\(x_{k+1} = x_k - \alpha_k \nabla f(x_k)\).</li>
+            <li>\(k \leftarrow k + 1\).</li>
+          </ol>
+        </li>
+      </ol>
+    </div>
+    <p>It is a valid descent direction whenever we are not already at a stationary point:</p>
+    <div class="math-block">\[ \nabla f(x_k)^\top d_k = -\|\nabla f(x_k)\|^2 &lt; 0 \quad\Longrightarrow\quad f(x_{k+1}) \approx f(x_k) - \alpha_k \|\nabla f(x_k)\|^2 &lt; f(x_k). \]</div>
+    <p>So with small enough steps, gradient descent produces a strictly decreasing sequence \(f(x_0) &gt; f(x_1) &gt; f(x_2) &gt; \cdots\). Under further assumptions (part c), the iterates converge to a stationary point, and to a global minimum when \(f\) is convex.</p>
+
+    <div class="tabs">
+      <div class="tab-panel" data-tab="In one dimension">
+        <p>With one variable the rule is \(x_{k+1} = x_k - \alpha f'(x_k)\). If the slope is negative, \(f\) decreases to the right, and \(-\alpha f'(x_k) &gt; 0\) moves you right. If the slope is positive, you move left. The steeper the slope, the bigger the move.</p>
+      </div>
+      <div class="tab-panel" data-tab="Geometrically">
+        <p>In two or more dimensions the gradient is perpendicular to the level set (contour line) through \(x_k\). Gradient descent therefore always steps straight across the contour lines, in the downhill direction. That is the locally steepest way down, but not necessarily the most direct route to the minimum. Part d shows how this causes zigzagging.</p>
+      </div>
+      <div class="tab-panel" data-tab="Why steepest?">
+        <p>Among all directions of length one, which decreases \(f\) fastest to first order? We want to minimize \(\nabla f(x)^\top v\) subject to \(\|v\|_2 = 1\). By the Cauchy-Schwarz inequality, \(\nabla f(x)^\top v \ge -\|\nabla f(x)\|\), with equality for \(v = -\nabla f(x)/\|\nabla f(x)\|\). So the negative gradient is the direction of steepest descent in the Euclidean norm. Other norms give other methods (part d).</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="watch">
+    <h2>Watch it step</h2>
+    <div class="widget" data-widget="gd-1d">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Gradient descent on \(f(x) = \tfrac14 x^4 - x^2 + 0.4x\)</h4><p>The dashed line is the tangent at the current point. The red arrow is the next move, \(-\alpha f'(x_k)\). Step through, then try a large step size and a start point on the right.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>Three things to notice:</p>
+    <ul>
+      <li><strong>Steps shrink automatically.</strong> Near the bottom the slope is small, so \(\alpha |f'(x_k)|\) is small, even with a constant \(\alpha\).</li>
+      <li><strong>Too large a step overshoots.</strong> Push \(\alpha\) towards 0.9 and the iterates bounce across the valley or fly off. Small enough \(\alpha\) is part of the descent guarantee.</li>
+      <li><strong>Where you start decides where you end.</strong> Starting at \(x_0 = 1.9\), you land in the right-hand valley, which is only a local minimum. The function is not convex, so gradient descent has no way of knowing a better valley exists.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="regression">
+    <h2>Gradient descent for regression</h2>
+    <p>Back to ridge regression from part a, \(f(\beta) = \tfrac12 \|y - X\beta\|^2 + \tfrac{\lambda}{2}\|\beta\|^2\), with gradient \(\nabla f(\beta) = -X^\top (y - X\beta) + \lambda \beta\). Written coefficient by coefficient, the update is</p>
+    <div class="math-block">\[ \beta_j^{k+1} = \beta_j^k + \alpha \left( \sum_{i=1}^n x_{ij} \Big( y_i - \sum_{l=1}^m x_{il} \beta_l^k \Big) - \lambda \beta_j^k \right). \]</div>
+    <p>Read the bracket as feedback. \(y_i - \sum_l x_{il}\beta_l^k\) is the current residual for data point \(i\). If the model under-predicts (positive residual) on points where feature \(j\) is positive, coefficient \(\beta_j\) goes up. The \(-\lambda \beta_j^k\) term pulls every coefficient back towards zero. Each iteration is a small model adjustment based on how well the current fit performs, repeated until progress becomes negligible.</p>
+    <p>Because the ridge loss is convex, gradient descent is guaranteed to reach the global minimum. How fast is another matter. The lecture's example predicts wine prices from 46 samples and 7 features, and compares small, large and optimized step sizes. The loss curves differ a lot, for both small and large \(\lambda\). Speed is a matter of algorithm design, which is what parts c and d are about.</p>
+  </section>
+
+  <section class="block" id="rates">
+    <h2>Rates of convergence</h2>
+    <p>To compare algorithms we need a language for speed. Let \(z_k\) be a sequence converging to \(z^*\). It could be the iterates \(x_k\) or the values \(f(x_k)\).</p>
+    <div class="box">
+      <span class="label">Definition</span>
+      <p>The sequence has <strong>order</strong> \(p\) and <strong>rate</strong> \(\beta\) if</p>
+      <div class="math-block">\[ \lim_{k \to \infty} \frac{|z_{k+1} - z^*|}{|z_k - z^*|^p} = \beta. \]</div>
+    </div>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Name</th><th>Condition</th><th>Example</th><th>What it feels like</th></tr></thead>
+      <tbody>
+        <tr><td>Sub-linear</td><td>\(p = 1,\ \beta = 1\)</td><td>\(z_k = 1/k\)</td><td>Progress keeps slowing down. Ten times more accuracy costs ten times more iterations.</td></tr>
+        <tr><td>Linear</td><td>\(p = 1,\ 0 &lt; \beta &lt; 1\)</td><td>\(z_k = a^k,\ a &lt; 1\)</td><td>The error shrinks by a constant factor each step. A fixed number of correct digits gained per iteration.</td></tr>
+        <tr><td>Super-linear</td><td>\(p = 1,\ \beta = 0\)</td><td>\(z_k = (1/k)^k\)</td><td>The shrink factor itself tends to zero. Faster than any linear rate.</td></tr>
+        <tr><td>Quadratic</td><td>\(p = 2\)</td><td>\(z_k = a^{2^k},\ a &lt; 1\)</td><td>The number of correct digits roughly doubles each step. Newton's method, class 19.</td></tr>
+      </tbody>
+    </table></div>
+    <div class="widget" data-widget="rates">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Five rates side by side</h4><p>Switch between log and linear scale. On the log scale the differences that matter for algorithms become visible.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>A useful check. "Linear" in optimization does not mean the error falls along a straight line in ordinary units. It means the error is multiplied by roughly the same factor each step, which is a straight line on a log scale. And the smaller the factor, the faster. A linear rate with factor 0.5 beats one with factor 0.9 by a wide margin.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Descent methods move along a direction with \(\nabla f(x_k)^\top d_k &lt; 0\) and make progress if the step is small enough.</li>
+      <li>Gradient descent uses \(d_k = -\nabla f(x_k)\), the steepest descent direction in the Euclidean norm. It produces a monotonically decreasing sequence of values for small enough steps.</li>
+      <li>It converges to a stationary point under assumptions, and to a global minimum if \(f\) is convex. Otherwise the starting point matters.</li>
+      <li>Speed is measured by the order and rate of convergence: sub-linear, linear, super-linear, quadratic.</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>True or false questions about the descent property are common. Gradient descent with a small enough step: a descent algorithm, true. Newton's method with step size 1 (class 19): not necessarily, it can be attracted to a maximum or overshoot. Stochastic gradient descent with a constant step (class 20): not necessarily, a noisy gradient estimate can increase \(f\).</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">At \(x_k\) the gradient is \(\nabla f(x_k) = (2, -1)\). Which direction is <em>not</em> a descent direction?</div>
+      <div class="opts">
+        <button class="opt">\(d = (-2, 1)\)</button>
+        <button class="opt">\(d = (-1, 0)\)</button>
+        <button class="opt" data-correct>\(d = (1, 1)\)</button>
+      </div>
+      <div class="feedback">Compute \(\nabla f(x_k)^\top d\): \(-5\), \(-2\) and \(2 - 1 = 1\). Only the last is positive, so moving along \((1, 1)\) increases \(f\) to first order.</div>
+    </div>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">An algorithm's error behaves like \(e_k = 10^{-k}\). Its convergence is:</div>
+      <div class="opts">
+        <button class="opt">Sub-linear.</button>
+        <button class="opt" data-correct>Linear, with rate 0.1.</button>
+        <button class="opt">Quadratic.</button>
+      </div>
+      <div class="feedback">\(e_{k+1}/e_k = 0.1\) for every \(k\), so \(p = 1\) and \(\beta = 0.1\). One extra correct digit per iteration. Quadratic would look like \(10^{-2^k}\).</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="optimality-conditions.html"><small>Previous · 18a</small>Optimality conditions</a>
+    <a class="next" href="convergence.html"><small>Next · 18c</small>Convergence guarantees</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 18, slides 12 to 25 · Boyd and Vandenberghe 9.2 and 9.3</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

@@ -1,0 +1,210 @@
+/* Opti: shared behaviour (theme, search, math, flashcards, quizzes) */
+(function () {
+  "use strict";
+
+  /* ---------- search index: one entry per page ---------- */
+  var PAGES = [
+    { t: "Class 18: Gradient descent", d: "Unconstrained minimization, optimality conditions, gradient descent, convergence, step sizes", u: "/class18/", k: "gradient descent unconstrained minimization overview" },
+    { t: "18a: Optimality conditions", d: "Stationary points, Hessian, positive definite, local vs global minimum, convexity", u: "/class18/optimality-conditions.html", k: "stationary point hessian positive definite semidefinite indefinite saddle necessary sufficient convex global local first-order second-order taylor ridge regression" },
+    { t: "18b: The gradient descent algorithm", d: "Descent directions, the update rule, rates of convergence", u: "/class18/gradient-descent.html", k: "descent direction update rule step size algorithm rate of convergence linear sublinear superlinear quadratic order" },
+    { t: "18c: Convergence guarantees", d: "M-smoothness, m-strong convexity, sub-linear and linear rates, the proof", u: "/class18/convergence.html", k: "smooth lipschitz strongly convex strong convexity sublinear linear 1/M rate proof telescoping iterations epsilon condition number" },
+    { t: "18d: Step sizes, initialization and scaling", d: "Constant, diminishing, exact and backtracking line search, condition number, diagonal scaling, steepest descent", u: "/class18/step-sizes.html", k: "step size line search exact backtracking armijo diminishing constant initialization local minimum condition number kantorovich zigzag scaling diagonal steepest descent norm coordinate descent rosenbrock" }
+  ];
+
+  /* ---------- theme ---------- */
+  function initTheme() {
+    var stored = null;
+    try { stored = localStorage.getItem("opti-theme"); } catch (e) {}
+    if (stored === "light" || stored === "dark") document.documentElement.setAttribute("data-theme", stored);
+    var btn = document.querySelector(".theme-btn");
+    if (!btn) return;
+    function isDark() {
+      var t = document.documentElement.getAttribute("data-theme");
+      if (t) return t === "dark";
+      return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    }
+    function label() { btn.textContent = isDark() ? "☀" : "☾"; btn.title = isDark() ? "Light mode" : "Dark mode"; }
+    label();
+    btn.addEventListener("click", function () {
+      var next = isDark() ? "light" : "dark";
+      document.documentElement.setAttribute("data-theme", next);
+      try { localStorage.setItem("opti-theme", next); } catch (e) {}
+      label();
+      document.dispatchEvent(new CustomEvent("opti-theme"));
+    });
+  }
+
+  /* ---------- search ---------- */
+  function initSearch() {
+    document.querySelectorAll(".search-wrap").forEach(function (wrap) {
+      var input = wrap.querySelector("input");
+      var box = wrap.querySelector(".search-results");
+      var active = -1;
+      function score(p, q) {
+        var hay = (p.t + " " + p.d + " " + p.k).toLowerCase();
+        var words = q.toLowerCase().split(/\s+/).filter(Boolean);
+        var s = 0;
+        for (var i = 0; i < words.length; i++) {
+          var w = words[i];
+          if (hay.indexOf(w) < 0) return 0;
+          s += p.t.toLowerCase().indexOf(w) >= 0 ? 3 : 1;
+        }
+        return s;
+      }
+      function render() {
+        var q = input.value.trim();
+        if (!q) { box.classList.remove("open"); return; }
+        var hits = PAGES.map(function (p) { return { p: p, s: score(p, q) }; })
+          .filter(function (h) { return h.s > 0; })
+          .sort(function (a, b) { return b.s - a.s; });
+        active = -1;
+        box.innerHTML = hits.length
+          ? hits.map(function (h) { return '<a href="' + h.p.u + '">' + h.p.t + "<small>" + h.p.d + "</small></a>"; }).join("")
+          : '<div class="empty">No matches. Try "Hessian" or "step size".</div>';
+        box.classList.add("open");
+      }
+      input.addEventListener("input", render);
+      input.addEventListener("focus", render);
+      input.addEventListener("keydown", function (e) {
+        var links = box.querySelectorAll("a");
+        if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          e.preventDefault();
+          if (!links.length) return;
+          active = (active + (e.key === "ArrowDown" ? 1 : -1) + links.length) % links.length;
+          links.forEach(function (l, i) { l.classList.toggle("active", i === active); });
+        } else if (e.key === "Enter") {
+          var target = links[active >= 0 ? active : 0];
+          if (target) window.location.href = target.getAttribute("href");
+        } else if (e.key === "Escape") {
+          box.classList.remove("open"); input.blur();
+        }
+      });
+      document.addEventListener("click", function (e) { if (!wrap.contains(e.target)) box.classList.remove("open"); });
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "/" && document.activeElement.tagName !== "INPUT") {
+        var i = document.querySelector(".search-wrap input");
+        if (i && i.offsetParent) { e.preventDefault(); i.focus(); }
+      }
+    });
+  }
+
+  /* ---------- math ---------- */
+  function renderMath(el) {
+    if (window.renderMathInElement) {
+      window.renderMathInElement(el || document.body, {
+        delimiters: [
+          { left: "\\[", right: "\\]", display: true },
+          { left: "\\(", right: "\\)", display: false }
+        ],
+        throwOnError: false
+      });
+    }
+  }
+
+  /* ---------- flashcards ---------- */
+  function initFlashcards() {
+    document.querySelectorAll(".flashcards").forEach(function (root) {
+      var src = root.querySelector("script[type='application/json']");
+      if (!src) return;
+      var cards = JSON.parse(src.textContent);
+      var order = cards.map(function (_, i) { return i; });
+      var idx = 0;
+      root.insertAdjacentHTML("beforeend",
+        '<div class="fc-stage"><div class="fc-card" tabindex="0" aria-live="polite">' +
+        '<div class="fc-face fc-front"><span class="fc-label">Question</span><div class="fc-text"></div><span class="fc-hint">Click or press space to flip</span></div>' +
+        '<div class="fc-face fc-back"><span class="fc-label">Answer</span><div class="fc-text"></div></div>' +
+        "</div></div>" +
+        '<div class="fc-controls"><button class="btn ghost fc-prev" aria-label="Previous card">←</button>' +
+        '<span class="fc-counter"></span><div class="fc-bar"><div class="fc-bar-fill"></div></div>' +
+        '<button class="btn ghost fc-shuffle">Shuffle</button><button class="btn fc-next" aria-label="Next card">→</button></div>');
+      var card = root.querySelector(".fc-card");
+      var front = root.querySelector(".fc-front .fc-text");
+      var back = root.querySelector(".fc-back .fc-text");
+      function show() {
+        card.classList.remove("flipped");
+        var c = cards[order[idx]];
+        front.innerHTML = c.q;
+        back.innerHTML = c.a;
+        renderMath(card);
+        root.querySelector(".fc-counter").textContent = (idx + 1) + " / " + cards.length;
+        root.querySelector(".fc-bar-fill").style.width = ((idx + 1) / cards.length * 100) + "%";
+      }
+      function flip() { card.classList.toggle("flipped"); }
+      card.addEventListener("click", flip);
+      card.addEventListener("keydown", function (e) {
+        if (e.key === " " || e.key === "Enter") { e.preventDefault(); flip(); }
+        if (e.key === "ArrowRight") { idx = (idx + 1) % cards.length; show(); }
+        if (e.key === "ArrowLeft") { idx = (idx - 1 + cards.length) % cards.length; show(); }
+      });
+      root.querySelector(".fc-next").addEventListener("click", function () { idx = (idx + 1) % cards.length; show(); });
+      root.querySelector(".fc-prev").addEventListener("click", function () { idx = (idx - 1 + cards.length) % cards.length; show(); });
+      root.querySelector(".fc-shuffle").addEventListener("click", function () {
+        for (var i = order.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)); var t = order[i]; order[i] = order[j]; order[j] = t; }
+        idx = 0; show();
+      });
+      show();
+    });
+  }
+
+  /* ---------- quizzes ---------- */
+  function initQuizzes() {
+    var all = document.querySelectorAll(".quiz");
+    var answered = 0, right = 0;
+    var scoreEl = document.querySelector(".quiz-score");
+    function updateScore() {
+      if (scoreEl) scoreEl.textContent = answered === 0 ? "" : "Score: " + right + " / " + answered + " answered (" + all.length + " questions in total)";
+    }
+    all.forEach(function (q) {
+      var opts = q.querySelectorAll(".opt");
+      var fb = q.querySelector(".feedback");
+      opts.forEach(function (o) {
+        o.addEventListener("click", function () {
+          var ok = o.hasAttribute("data-correct");
+          opts.forEach(function (x) {
+            x.disabled = true;
+            if (x.hasAttribute("data-correct")) x.classList.add("correct");
+          });
+          if (!ok) o.classList.add("wrong");
+          if (fb) {
+            fb.insertAdjacentHTML("afterbegin", ok ? "<b>Correct.</b> " : "<b>Not quite.</b> ");
+            fb.classList.add("show");
+          }
+          answered++; if (ok) right++;
+          updateScore();
+        });
+      });
+    });
+  }
+
+  /* ---------- tabs ---------- */
+  function initTabs() {
+    document.querySelectorAll(".tabs").forEach(function (t) {
+      var panels = t.querySelectorAll(":scope > .tab-panel");
+      var bar = document.createElement("div");
+      bar.className = "tab-bar"; bar.setAttribute("role", "tablist");
+      panels.forEach(function (p, i) {
+        var b = document.createElement("button");
+        b.type = "button"; b.textContent = p.getAttribute("data-tab"); b.setAttribute("role", "tab");
+        if (i === 0) { b.classList.add("on"); p.classList.add("on"); }
+        b.addEventListener("click", function () {
+          bar.querySelectorAll("button").forEach(function (x) { x.classList.remove("on"); });
+          panels.forEach(function (x) { x.classList.remove("on"); });
+          b.classList.add("on"); p.classList.add("on");
+        });
+        bar.appendChild(b);
+      });
+      t.insertBefore(bar, t.firstChild);
+    });
+  }
+
+  document.addEventListener("DOMContentLoaded", function () {
+    initTabs();
+    initTheme();
+    initSearch();
+    initQuizzes();
+    renderMath();
+    initFlashcards();
+  });
+  window.Opti = { renderMath: renderMath };
+})();

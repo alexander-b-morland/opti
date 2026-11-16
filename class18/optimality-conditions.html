@@ -1,0 +1,257 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>18a Optimality conditions · Opti</title>
+<meta name="description" content="Stationary points, the Hessian test, saddle points and convexity: how to recognise a minimum of an unconstrained function.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="widgets.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 18: Gradient descent</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 18 · Part a</p>
+  <h1>Optimality <em>conditions</em></h1>
+  <p class="lede">Before running an algorithm, we need to know what we are looking for. A flat spot is necessary for a minimum, but it is not enough. Curvature and convexity decide the rest.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#local-global">Local and global minima</a></li>
+      <li><a href="#tools">Gradient and Hessian</a></li>
+      <li><a href="#necessary">Necessary conditions</a></li>
+      <li><a href="#sufficient">The sufficient condition</a></li>
+      <li><a href="#hessian-test">Reading a Hessian</a></li>
+      <li><a href="#examples">Two worked examples</a></li>
+      <li><a href="#convex">The convex case</a></li>
+      <li><a href="#ridge">Example: ridge regression</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="local-global">
+    <h2>Local and global minima</h2>
+    <p>We study \(\min_{x \in \mathbb{R}^n} f(x)\) where \(f\) is continuous and, for this class, twice continuously differentiable. Two kinds of minimum matter.</p>
+    <div class="box">
+      <span class="label">Definitions</span>
+      <p>\(x^*\) is a <strong>global minimum</strong> if \(f(x^*) \le f(x)\) for every \(x \in \mathbb{R}^n\).</p>
+      <p>\(x^*\) is a <strong>local minimum</strong> if there is a radius \(\varepsilon &gt; 0\) such that \(f(x^*) \le f(x)\) for every \(x\) with \(\|x - x^*\| \le \varepsilon\). It is a <strong>strict</strong> local minimum if the inequality is strict for \(x \neq x^*\).</p>
+    </div>
+    <p>Algorithms only ever look at a small neighbourhood of the current point, so local information is all they can use. The whole of this part is about what local information can tell you, and what it cannot.</p>
+  </section>
+
+  <section class="block" id="tools">
+    <h2>The two tools: gradient and Hessian</h2>
+    <p>The <strong>gradient</strong> collects the first partial derivatives. It points in the direction in which \(f\) increases fastest, and its length is that rate of increase.</p>
+    <div class="math-block">\[ \nabla f(x) = \left( \frac{\partial f}{\partial x_1}(x), \dots, \frac{\partial f}{\partial x_n}(x) \right) \]</div>
+    <p>The <strong>Hessian</strong> collects the second partial derivatives. It is a symmetric \(n \times n\) matrix that describes curvature: how the slope itself changes as you move.</p>
+    <div class="math-block">\[ \nabla^2 f(x) = \left[ \frac{\partial^2 f}{\partial x_i \, \partial x_j}(x) \right]_{i,j = 1}^n \]</div>
+    <p>Together they give the second-order Taylor expansion, which is the source of every result in this part:</p>
+    <div class="math-block">\[ f(x + d) \approx f(x) + \nabla f(x)^\top d + \tfrac12 \, d^\top \nabla^2 f(x) \, d \]</div>
+    <p>Read it as: the value nearby equals the value here, plus a slope term that is linear in the step, plus a curvature term that is quadratic in the step. For small steps, the slope term dominates. Only when the slope term vanishes does the curvature term get the final word.</p>
+  </section>
+
+  <section class="block" id="necessary">
+    <h2>Necessary conditions: what every minimum satisfies</h2>
+    <div class="box theorem">
+      <span class="label">Theorem (necessary conditions)</span>
+      <p>Let \(f\) be twice continuously differentiable. If \(x^*\) is a local minimum, then</p>
+      <div class="math-block">\[ \nabla f(x^*) = 0 \qquad \text{and} \qquad \nabla^2 f(x^*) \succeq 0. \]</div>
+    </div>
+    <p>\(\nabla^2 f(x^*) \succeq 0\) means the Hessian is <strong>positive semidefinite</strong>: \(u^\top \nabla^2 f(x^*) u \ge 0\) for every vector \(u\). In words, \(f\) does not curve downward in any direction.</p>
+
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Intuition">
+        <p>If the gradient were not zero, you could take a tiny step against it and go downhill. So a minimum must be flat. And if the function curved downward in some direction, a tiny step along that direction would also go downhill. So a minimum cannot curve down anywhere.</p>
+      </div>
+      <div class="tab-panel" data-tab="Proof of the first-order condition">
+        <p>Fix any direction \(d\). Because \(x^*\) is a local minimum, for every small enough \(\alpha &gt; 0\):</p>
+        <div class="math-block">\[ \frac{f(x^* + \alpha d) - f(x^*)}{\alpha} \ge 0. \]</div>
+        <p>Let \(\alpha \to 0\). The left side becomes the directional derivative, so \(\nabla f(x^*)^\top d \ge 0\) for every \(d\). Apply this to \(d = e_i\) and \(d = -e_i\). Both \(\partial_i f(x^*) \ge 0\) and \(-\partial_i f(x^*) \ge 0\), so \(\partial_i f(x^*) = 0\) for every \(i\).</p>
+      </div>
+      <div class="tab-panel" data-tab="Proof of the second-order condition">
+        <p>Use the Taylor expansion with remainder. There is a function \(\varepsilon(\cdot)\) with \(\varepsilon(y) \to 0\) as \(y \to 0\) such that</p>
+        <div class="math-block">\[ f(x^* + \alpha d) - f(x^*) = \alpha \underbrace{\nabla f(x^*)^\top d}_{=0} + \frac{\alpha^2}{2} d^\top \nabla^2 f(x^*) d + \alpha^2 \|d\|^2 \varepsilon(\alpha d). \]</div>
+        <p>The left side is \(\ge 0\) for small \(\alpha\). Divide by \(\alpha^2\) and let \(\alpha \to 0\). The remainder vanishes, and we are left with \(d^\top \nabla^2 f(x^*) d \ge 0\) for every \(d\).</p>
+      </div>
+    </div>
+
+    <p>A point with \(\nabla f(x) = 0\) is called a <strong>stationary point</strong>. Every local minimum is stationary, but so is every local maximum and every saddle point. Stationary points are candidates, nothing more.</p>
+  </section>
+
+  <section class="block" id="sufficient">
+    <h2>The sufficient condition: when you can be sure</h2>
+    <div class="box theorem">
+      <span class="label">Theorem (sufficient condition)</span>
+      <p>Let \(f\) be twice continuously differentiable. If</p>
+      <div class="math-block">\[ \nabla f(x^*) = 0 \qquad \text{and} \qquad \nabla^2 f(x^*) \succ 0, \]</div>
+      <p>then \(x^*\) is a strict local minimum.</p>
+    </div>
+    <p>\(\nabla^2 f(x^*) \succ 0\) means <strong>positive definite</strong>: \(u^\top \nabla^2 f(x^*) u &gt; 0\) for every \(u \neq 0\). The function curves strictly upward in every direction.</p>
+    <details class="more"><summary>Proof sketch</summary><div>
+      <p>The Hessian is continuous, so it stays positive definite in a small ball \(\|x - x^*\| \le \varepsilon\). By Taylor's theorem with the mean-value form of the remainder, for any \(\|y\| \le \varepsilon\) there is a point \(z = ty\) with \(t \in [0, 1]\) such that</p>
+      <div class="math-block">\[ f(x^* + y) - f(x^*) = \underbrace{\nabla f(x^*)^\top y}_{=0} + \tfrac12 \underbrace{y^\top \nabla^2 f(x^* + z)\, y}_{&gt;0 \text{ for } y \neq 0}. \]</div>
+      <p>So \(f(x^* + y) &gt; f(x^*)\) for every nonzero \(y\) in the ball.</p>
+    </div></details>
+
+    <p>Notice the gap between the two theorems. Necessary asks for \(\succeq 0\). Sufficient asks for \(\succ 0\). When the Hessian is positive semidefinite but singular, second-order information cannot decide. Explore the gap below.</p>
+
+    <div class="widget" data-widget="stationary-1d">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Five functions, one stationary point</h4><p>Each function has \(f'(0) = 0\). Switch between them and see which conditions hold and what the point actually is.</p></div>
+      <div class="widget-body"></div>
+    </div>
+
+    <div class="callout gold">
+      <span class="label">The key lesson</span>
+      <p>\(x^3\) and \(x^4\) have the same first and second derivatives at 0. One has a minimum there and one does not. When \(f''(x^*) = 0\) (or the Hessian is singular), you must look beyond second-order information, for example by evaluating \(f\) at nearby points.</p>
+    </div>
+  </section>
+
+  <section class="block" id="hessian-test">
+    <h2>Reading a Hessian</h2>
+    <p>In practice the question is always: is this symmetric matrix positive definite, positive semidefinite or indefinite? The eigenvalues answer it.</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Eigenvalues of \(\nabla^2 f(x^*)\)</th><th>Name</th><th>Conclusion at a stationary point</th></tr></thead>
+      <tbody>
+        <tr><td>All \(&gt; 0\)</td><td>Positive definite, \(\succ 0\)</td><td>Strict local minimum</td></tr>
+        <tr><td>All \(\ge 0\), some \(= 0\)</td><td>Positive semidefinite, singular</td><td>Inconclusive. Could be a minimum or not.</td></tr>
+        <tr><td>Some \(&gt; 0\), some \(&lt; 0\)</td><td>Indefinite</td><td>Saddle point. Not a local minimum.</td></tr>
+        <tr><td>All \(&lt; 0\)</td><td>Negative definite, \(\prec 0\)</td><td>Strict local maximum</td></tr>
+      </tbody>
+    </table></div>
+    <p>For a \(2 \times 2\) symmetric matrix \(\begin{pmatrix} a & b \\ b & c \end{pmatrix}\) there is a shortcut that avoids computing eigenvalues. The determinant is the product of the eigenvalues and the trace is their sum.</p>
+    <ul>
+      <li>\(\det = ac - b^2 &gt; 0\) and \(a &gt; 0\): both eigenvalues positive, so positive definite.</li>
+      <li>\(\det &lt; 0\): eigenvalues of opposite sign, so indefinite.</li>
+      <li>\(\det = 0\): at least one eigenvalue is zero, so singular.</li>
+    </ul>
+
+    <div class="widget" data-widget="hessian-2d">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Hessian explorer</h4><p>Type in a symmetric Hessian. The plot shows the level sets of the curvature term \(\tfrac12 d^\top H d\) around the stationary point, with the eigenvector directions dashed. Try the presets from the lecture.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>The picture explains the table. Positive definite gives closed ellipses around the point, a bowl. Indefinite gives hyperbolas: a pass between two hills, uphill in one direction and downhill in the other. That is a saddle.</p>
+  </section>
+
+  <section class="block" id="examples">
+    <h2>Two worked examples from the lecture</h2>
+    <h3>Example 1: two candidates, one minimum</h3>
+    <div class="math-block">\[ f(x) = \tfrac12 x_1^2 + x_1 x_2 + 2 x_2^2 - 4x_1 - 4x_2 - x_2^3 \]</div>
+    <p><strong>Step 1, gradient.</strong></p>
+    <div class="math-block">\[ \nabla f(x) = \begin{pmatrix} x_1 + x_2 - 4 \\ x_1 + 4x_2 - 4 - 3x_2^2 \end{pmatrix} \]</div>
+    <p><strong>Step 2, solve \(\nabla f = 0\).</strong> The first equation gives \(x_1 = 4 - x_2\). Substituting into the second gives \(3x_2 - 3x_2^2 = 0\), so \(x_2 = 0\) or \(x_2 = 1\). The candidates are \((4, 0)\) and \((3, 1)\).</p>
+    <p><strong>Step 3, Hessian.</strong></p>
+    <div class="math-block">\[ \nabla^2 f(x) = \begin{pmatrix} 1 & 1 \\ 1 & 4 - 6x_2 \end{pmatrix} \]</div>
+    <p><strong>Step 4, classify.</strong> At \((4, 0)\) the Hessian is \(\begin{pmatrix} 1 & 1 \\ 1 & 4 \end{pmatrix}\), with \(a = 1 &gt; 0\) and \(\det = 3 &gt; 0\). Positive definite, so a strict local minimum. At \((3, 1)\) it is \(\begin{pmatrix} 1 & 1 \\ 1 & -2 \end{pmatrix}\) with \(\det = -3 &lt; 0\). Indefinite, so a saddle point.</p>
+    <p class="muted">Is \((4, 0)\) a global minimum? No. The \(-x_2^3\) term sends \(f\) to \(-\infty\) as \(x_2 \to +\infty\), so there is no global minimum at all. Local tests cannot see that.</p>
+
+    <h3>Example 2: the test passes, the point fails</h3>
+    <div class="math-block">\[ f(x) = x_1^3 + x_2^2, \qquad \nabla f(x) = \begin{pmatrix} 3x_1^2 \\ 2x_2 \end{pmatrix}, \qquad \nabla^2 f(x) = \begin{pmatrix} 6x_1 & 0 \\ 0 & 2 \end{pmatrix} \]</div>
+    <p>The only stationary point is \((0, 0)\), where the Hessian is \(\begin{pmatrix} 0 & 0 \\ 0 & 2 \end{pmatrix} \succeq 0\). Both necessary conditions hold. Yet \(f(-\varepsilon, 0) = -\varepsilon^3 &lt; 0 = f(0, 0)\), so it is not a local minimum. This is the two-dimensional version of \(x^3\).</p>
+  </section>
+
+  <section class="block" id="convex">
+    <h2>The convex case: every flat point is the bottom</h2>
+    <p>Recall the two characterisations of convexity for differentiable functions:</p>
+    <div class="box">
+      <span class="label">Reminder: convexity tests</span>
+      <p><strong>First-order:</strong> \(f\) is convex if and only if \(f(y) \ge f(x) + \nabla f(x)^\top (y - x)\) for all \(x, y\). The tangent plane lies below the graph everywhere.</p>
+      <p><strong>Second-order:</strong> a twice continuously differentiable \(f\) is convex if and only if \(\nabla^2 f(x) \succeq 0\) for <em>all</em> \(x\).</p>
+    </div>
+    <div class="box theorem">
+      <span class="label">Theorem</span>
+      <p>Let \(f\) be convex and continuously differentiable. Then \(x^*\) is a global minimum if and only if \(\nabla f(x^*) = 0\).</p>
+    </div>
+    <p>The proof is one line. Plug \(\nabla f(x^*) = 0\) into the first-order condition: \(f(y) \ge f(x^*) + 0\) for every \(y\).</p>
+    <div class="callout">
+      <span class="label">Why this matters for algorithms</span>
+      <p>Gradient descent searches for a point where the gradient vanishes. For a convex function, finding one means you are done, globally. For a non-convex function, you may have found a local minimum, a saddle point, or something worse, and in general finding the global minimum is very hard.</p>
+    </div>
+    <p>Note the difference between the second-order tests. The sufficient condition checks the Hessian at <em>one point</em> and gives a <em>local</em> conclusion. Convexity requires \(\nabla^2 f \succeq 0\) <em>everywhere</em> and gives a <em>global</em> conclusion.</p>
+  </section>
+
+  <section class="block" id="ridge">
+    <h2>Example: ridge regression</h2>
+    <p>Fit coefficients \(\beta \in \mathbb{R}^m\) to data \(X \in \mathbb{R}^{n \times m}\), \(y \in \mathbb{R}^n\), with an \(\ell_2\) penalty \(\lambda &gt; 0\) that discourages large coefficients:</p>
+    <div class="math-block">\[ f(\beta) = \frac12 \sum_{i=1}^n \Big( y_i - \sum_{j=1}^m x_{ij} \beta_j \Big)^2 + \frac{\lambda}{2} \sum_{j=1}^m \beta_j^2 = \frac12 \|y - X\beta\|^2 + \frac{\lambda}{2}\|\beta\|^2. \]</div>
+    <p>Differentiate:</p>
+    <div class="math-block">\[ \nabla f(\beta) = -X^\top (y - X\beta) + \lambda \beta, \qquad \nabla^2 f(\beta) = X^\top X + \lambda I. \]</div>
+    <p>The Hessian is positive definite everywhere, because for any \(u \neq 0\)</p>
+    <div class="math-block">\[ u^\top (X^\top X + \lambda I) u = \|Xu\|^2 + \lambda \|u\|^2 &gt; 0. \]</div>
+    <p>So \(f\) is convex (in fact strongly convex), and the unique stationary point is the global minimum. Setting the gradient to zero gives the closed form</p>
+    <div class="math-block">\[ \beta^* = (X^\top X + \lambda I)^{-1} X^\top y. \]</div>
+    <p class="muted">With millions of features, inverting \(X^\top X + \lambda I\) is too expensive. That is where gradient descent comes in, in part b.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>A local minimum can only occur at a stationary point, \(\nabla f(x) = 0\).</li>
+      <li>Convex \(f\): any stationary point is a global minimum.</li>
+      <li>Otherwise, look at the Hessian at the stationary point. Positive definite: local minimum. Positive semidefinite and singular: may or may not be one. Indefinite: not a local minimum.</li>
+      <li>In non-convex optimization, finding the global minimum is very hard.</li>
+    </ul>
+
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>Last year's second midterm opened with exactly this trap: given only \(\nabla f(x^*) = 0\), is \(x^*\) a global minimum, a local minimum, or not necessarily either? Answer: not necessarily a local minimum, with \(x^3\) as the counterexample.</p>
+      <p>A second classic: for a constrained problem such as a linear program, the optimum usually has \(\nabla f(x^*) = c \neq 0\). The condition \(\nabla f = 0\) is for unconstrained problems only.</p>
+      <p>A longer question asked you to prove that a convex, differentiable \(f\) that is minimized along each coordinate separately at \(x^*\) is globally minimized there. Each coordinate-wise minimum gives \(\partial f/\partial x_i (x^*) = 0\), so \(\nabla f(x^*) = 0\), and convexity finishes the job. Without differentiability this fails: \(f(x) = \max\{x_1, x_2\} + |x_1 - x_2|\) is minimized along both axes at the origin, but \(f(-1, -1) = -1 &lt; 0\).</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">At a stationary point the Hessian is \(\begin{pmatrix} 4 & 2 \\ 2 & 1 \end{pmatrix}\). What can you conclude?</div>
+      <div class="opts">
+        <button class="opt">Strict local minimum.</button>
+        <button class="opt">Saddle point.</button>
+        <button class="opt" data-correct>Nothing definite from second-order information alone.</button>
+      </div>
+      <div class="feedback">\(\det = 4 - 4 = 0\) and the trace is 5, so the eigenvalues are 5 and 0. The Hessian is positive semidefinite and singular. The necessary conditions hold, the sufficient condition fails.</div>
+    </div>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">\(f\) is twice continuously differentiable with \(\nabla^2 f(x) \succeq 0\) for all \(x\), and \(\nabla f(\bar x) = 0\). Then \(\bar x\) is:</div>
+      <div class="opts">
+        <button class="opt" data-correct>A global minimum.</button>
+        <button class="opt">A strict local minimum.</button>
+        <button class="opt">Possibly a saddle point.</button>
+      </div>
+      <div class="feedback">A Hessian that is positive semidefinite everywhere means \(f\) is convex, and a stationary point of a convex function is a global minimum. It need not be strict: think of \(f(x) = 0\).</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="./"><small>Back to</small>Class 18 overview</a>
+    <a class="next" href="gradient-descent.html"><small>Next · 18b</small>The gradient descent algorithm</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 18, slides 2 to 11 · Boyd and Vandenberghe 9.1</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>
