@@ -67,7 +67,6 @@
       if (b.querySelector(".s2").checked) lines.push([fitL2(pts), pal.accent, "2-norm"]);
       if (b.querySelector(".s1").checked) lines.push([fitL1(pts), pal.gold, "1-norm"]);
       if (b.querySelector(".si").checked) lines.push([fitInf(pts), pal.red, "∞-norm"]);
-      ctx.save(); ctx.globalAlpha = 0.9; ctx.fillStyle = pal.bg; ctx.fillRect(6, 6, 190, 8 + 18 * lines.length); ctx.restore();
       lines.forEach(function (L) { var a = L[0][0], c = L[0][1]; P.curve(ctx, v, function (x) { return a * x + c; }, L[1], 2.4); });
       ctx.save(); ctx.globalAlpha = 0.9; ctx.fillStyle = pal.bg; ctx.fillRect(6, 6, 190, 8 + 18 * lines.length); ctx.restore();
       lines.forEach(function (L, i) {
