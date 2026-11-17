@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>17b Problem classes and convexity · Opti</title>
+<meta name="description" content="The general non-linear optimization problem, its main classes (QP, QCQP, SOCP, SDP, NLP), local and global optima, convex sets and functions, and how to recognize convexity.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/nlp.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 17: Non-linear optimization modeling</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 17 · Part b</p>
+  <h1>Problem classes and <em>convexity</em></h1>
+  <p class="lede">All non-linear problems share one general form, but they are far from equally hard. Convexity is the dividing line. This part gives the definitions and the tests for recognizing it.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#general">The general problem</a></li>
+      <li><a href="#classes">Classes of non-linear problems</a></li>
+      <li><a href="#local-global">Local and global optima</a></li>
+      <li><a href="#sets">Convex sets</a></li>
+      <li><a href="#functions">Convex functions</a></li>
+      <li><a href="#calculus">Building convex functions</a></li>
+      <li><a href="#tests">Recognizing convexity</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="general">
+    <h2>The general problem</h2>
+    <div class="math-block">\[ (\text{NLO})\quad \min\ f(x) \quad \text{s.t.}\quad g_i(x) \le 0,\ i = 1, \dots, m, \qquad h_j(x) = 0,\ j = 1, \dots, \ell. \]</div>
+    <p>\(f, g_i, h_j : \mathbb{R}^n \to \mathbb{R}\) are continuous, usually differentiable. The set of points satisfying all constraints is the feasible region \(\mathcal{F}\).</p>
+  </section>
+
+  <section class="block" id="classes">
+    <h2>Classes of non-linear problems</h2>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Class</th><th>Form</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr><td>Quadratic program (QP)</td><td>\(\min x^\top Qx + c^\top x\) s.t. \(Ax = b,\ x \ge 0\)</td><td>Convex QP when \(Q \succeq 0\)</td></tr>
+        <tr><td>Quadratically constrained QP (QCQP)</td><td>\(\min x^\top Q_0 x + c_0^\top x\) s.t. \(x^\top Q_i x + c_i^\top x \le r_i,\ Ax = b\)</td><td>Convex when all \(Q_i \succeq 0\)</td></tr>
+        <tr><td>Second-order cone program (SOCP)</td><td>\(\min c_0^\top x\) s.t. \(\|Q_i x + p_i\|_2 \le s_i^\top x + r_i,\ Ax = b\)</td><td>The ellipsoidal robust counterpart of class 14</td></tr>
+        <tr><td>Semidefinite program (SDP)</td><td>\(\min \langle C, X\rangle\) s.t. \(\langle A_i, X\rangle = b_i,\ X \succeq 0\)</td><td>The variable is a matrix</td></tr>
+        <tr><td>Non-linear program (NLP)</td><td>\(\min f(x)\) s.t. \(g_i(x) \le 0,\ h_j(x) = 0\)</td><td>Everything else</td></tr>
+      </tbody>
+    </table></div>
+    <p>Roughly, the list goes from more special (and easier) to more general (and harder). LP is a special case of all of them.</p>
+  </section>
+
+  <section class="block" id="local-global">
+    <h2>Local and global optima</h2>
+    <div class="box">
+      <span class="label">Definitions</span>
+      <p><strong>Ball:</strong> \(B(\bar x, \varepsilon) = \{z : \|z - \bar x\| \le \varepsilon\}\).</p>
+      <p><strong>Local minimum:</strong> \(x^* \in \mathcal{F}\) with \(f(x^*) \le f(y)\) for all \(y \in B(x^*, \varepsilon) \cap \mathcal{F}\), for some \(\varepsilon &gt; 0\).</p>
+      <p><strong>Global minimum:</strong> \(x^* \in \mathcal{F}\) with \(f(x^*) \le f(y)\) for all \(y \in \mathcal{F}\).</p>
+    </div>
+    <p>In linear optimization every local optimum is global. In general non-linear optimization that fails, and that is the root of most of the difficulty.</p>
+  </section>
+
+  <section class="block" id="sets">
+    <h2>Convex sets</h2>
+    <div class="box">
+      <span class="label">Definition</span>
+      <p>\(S \subseteq \mathbb{R}^n\) is <strong>convex</strong> if for all \(x, y \in S\) and \(\lambda \in [0, 1]\), \(\lambda x + (1 - \lambda) y \in S\).</p>
+    </div>
+    <p>The segment between any two points of the set stays in the set. A disc is convex. A crescent moon is not.</p>
+    <p><strong>Key property:</strong> the intersection of convex sets is convex. So if each constraint defines a convex set, the feasible region is convex.</p>
+  </section>
+
+  <section class="block" id="functions">
+    <h2>Convex functions</h2>
+    <div class="box">
+      <span class="label">Definition</span>
+      <p>\(f\) is <strong>convex</strong> if</p>
+      <div class="math-block">\[ f(\lambda x + (1 - \lambda) y) \le \lambda f(x) + (1 - \lambda) f(y) \quad \text{for all } x, y,\ \lambda \in [0, 1]. \]</div>
+      <p>\(f\) is <strong>concave</strong> if \(-f\) is convex.</p>
+    </div>
+    <p>Geometrically: the chord between any two points on the graph lies on or above the graph. A function can be convex, concave, both (linear functions) or neither.</p>
+    <div class="widget" data-widget="convexity">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Chords above, tangents below</h4><p>Pick a function, then move the chord endpoints \(x\), \(y\) and the tangent point. For a convex function no chord ever dips below the graph, and no tangent ever rises above it.</p></div>
+      <div class="widget-body"></div>
+    </div>
+  </section>
+
+  <section class="block" id="calculus">
+    <h2>Building convex functions</h2>
+    <p>Rather than checking the definition every time, build convex functions from known ones:</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Rule</th><th>Statement</th></tr></thead>
+      <tbody>
+        <tr><td>Nonnegative sums</td><td>\(f_1, f_2\) convex, \(\alpha, \beta \ge 0\) \(\Rightarrow\) \(\alpha f_1 + \beta f_2\) convex</td></tr>
+        <tr><td>Affine substitution</td><td>\(f\) convex \(\Rightarrow\) \(g(y) = f(Ay + b)\) convex</td></tr>
+        <tr><td>Pointwise maximum</td><td>\(f_1, \dots, f_k\) convex \(\Rightarrow\) \(\max\{f_1, \dots, f_k\}\) convex</td></tr>
+        <tr><td>Composition</td><td>\(h\) convex and non-decreasing, \(g\) convex \(\Rightarrow\) \(h(g(x))\) convex</td></tr>
+        <tr><td>Norms</td><td>Every norm \(\|x\|\) is convex</td></tr>
+      </tbody>
+    </table></div>
+    <p>Example: \(\sum_i w_i\|x - c_i\|\) (Fermat-Weber) is a nonnegative sum of norms of affine functions, so it is convex. \(\max_i \|x - c_i\|\) (ball circumscription) is a maximum of convex functions, so it is convex too.</p>
+  </section>
+
+  <section class="block" id="tests">
+    <h2>Recognizing convexity</h2>
+    <p>Recall the gradient \(\nabla f(x)\) and Hessian \(H(x) = \nabla^2 f(x)\), which give the first- and second-order Taylor approximations</p>
+    <div class="math-block">\[ f(x) \approx f(\bar x) + \nabla f(\bar x)^\top (x - \bar x) \qquad\text{and}\qquad f(x) \approx f(\bar x) + \nabla f(\bar x)^\top (x - \bar x) + \tfrac12 (x - \bar x)^\top H(\bar x)(x - \bar x). \]</div>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="First-order condition">
+        <div class="box theorem"><span class="label">Proposition</span>
+          <p>A differentiable \(f\) is convex if and only if \(f(y) \ge f(x) + \nabla f(x)^\top (y - x)\) for all \(x, y\).</p></div>
+        <p>The tangent plane at any point is a global underestimator. Local information (a gradient at one point) gives global information (a lower bound everywhere). This is exactly why a zero gradient means a global minimum for convex functions.</p>
+      </div>
+      <div class="tab-panel" data-tab="Proof">
+        <p>(\(\Rightarrow\)) By convexity, \(f(x + \lambda(y - x)) \le f(x) + \lambda(f(y) - f(x))\). Rearrange to \(\big(f(x + \lambda(y - x)) - f(x)\big)/\lambda \le f(y) - f(x)\), and let \(\lambda \to 0\): \(\nabla f(x)^\top (y - x) \le f(y) - f(x)\).</p>
+        <p>(\(\Leftarrow\)) Let \(z = \lambda x + (1 - \lambda)y\). Apply the inequality at \(z\) twice: \(f(x) \ge f(z) + \nabla f(z)^\top (x - z)\) and \(f(y) \ge f(z) + \nabla f(z)^\top (y - z)\). Multiply by \(\lambda\) and \(1 - \lambda\) and add. The gradient terms cancel, leaving \(\lambda f(x) + (1 - \lambda) f(y) \ge f(z)\).</p>
+      </div>
+      <div class="tab-panel" data-tab="Second-order condition">
+        <div class="box theorem"><span class="label">Proposition</span>
+          <p>A twice continuously differentiable \(f\) is convex if and only if \(H(x) \succeq 0\) for all \(x\).</p></div>
+        <p>Upward curvature everywhere. For a quadratic \(f(x) = \tfrac12 x^\top P x + q^\top x + r\), the gradient is \(Px + q\) and the Hessian is \(P\), so \(f\) is convex if and only if \(P \succeq 0\).</p>
+        <p>Recall: \(A \succeq 0\) means \(u^\top A u \ge 0\) for all \(u\), equivalently all eigenvalues are nonnegative.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>NLO: \(\min f(x)\) s.t. \(g_i(x) \le 0\), \(h_j(x) = 0\). Classes: QP, QCQP, SOCP, SDP, NLP.</li>
+      <li>Convex set: contains every segment. Intersections of convex sets are convex.</li>
+      <li>Convex function: chords above the graph. Equivalently tangents below it, or (twice differentiable) \(H \succeq 0\) everywhere.</li>
+      <li>Build convex functions from sums, affine substitutions, maxima, monotone compositions and norms.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">Which function is convex on \(\mathbb{R}^2\)?</div>
+      <div class="opts">
+        <button class="opt">\(f(x) = x_1 x_2\)</button>
+        <button class="opt" data-correct>\(f(x) = \max\{\|x\|_1,\ 3x_1 - x_2\}\)</button>
+        <button class="opt">\(f(x) = -\|x\|_2\)</button>
+      </div>
+      <div class="feedback">A norm and a linear function are both convex, and a maximum of convex functions is convex. \(x_1x_2\) has Hessian \(\begin{pmatrix} 0 & 1 \\ 1 & 0 \end{pmatrix}\), which is indefinite. \(-\|x\|_2\) is concave.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="applications.html"><small>Previous · 17a</small>A tour of non-linear models</a>
+    <a class="next" href="convex-optimization.html"><small>Next · 17c</small>Convex optimization</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 17, slides 18 to 29 · BV chapters 2 and 3</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

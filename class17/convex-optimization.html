@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>17c Convex optimization · Opti</title>
+<meta name="description" content="What makes an optimization problem convex, which of the lecture's models are convex, and why every local minimum of a convex problem is global.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 17: Non-linear optimization modeling</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 17 · Part c</p>
+  <h1>Convex <em>optimization</em></h1>
+  <p class="lede">A convex problem behaves like a linear one in the way that matters most: any local minimum is a global minimum. That single fact is why convex problems can be solved efficiently and non-convex ones generally cannot.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#definition">What makes a problem convex</a></li>
+      <li><a href="#examples">Which models are convex?</a></li>
+      <li><a href="#theorem">Local is global</a></li>
+      <li><a href="#landscape">Easier and harder</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="definition">
+    <h2>What makes a problem convex</h2>
+    <div class="box theorem">
+      <span class="label">Convex optimization problem</span>
+      <p>With \(f, g_1, \dots, g_m\) convex:</p>
+      <div class="math-block">\[ \min\ f(x) \quad \text{s.t.}\quad g_i(x) \le 0,\ i = 1, \dots, m, \qquad Ax = b. \]</div>
+    </div>
+    <p>Three ingredients:</p>
+    <ul>
+      <li>a <strong>convex objective</strong>, minimized (or a concave objective, maximized),</li>
+      <li><strong>convex inequality constraints</strong> in the form \(g_i(x) \le 0\),</li>
+      <li><strong>linear equality constraints</strong>.</li>
+    </ul>
+    <p>Each \(\{x : g_i(x) \le 0\}\) is a convex set (a sublevel set of a convex function), and \(\{x : Ax = b\}\) is convex. Their intersection, the feasible region \(\mathcal{F}\), is therefore convex.</p>
+    <div class="callout gold">
+      <span class="label">Watch the direction and the equalities</span>
+      <p>\(g(x) \ge 0\) with \(g\) convex is generally not convex (the outside of a disc). A non-linear equality \(h(x) = 0\) is generally not convex either (a circle is not a convex set). That is why only linear equalities are allowed.</p>
+    </div>
+  </section>
+
+  <section class="block" id="examples">
+    <h2>Which models are convex?</h2>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Model</th><th>Convex?</th><th>Why</th></tr></thead>
+      <tbody>
+        <tr><td>Linear optimization</td><td>Yes</td><td>Linear functions are convex. Polyhedra are convex sets.</td></tr>
+        <tr><td>Fermat-Weber: \(\min \sum_i w_i\|x - c_i\|\), \(Ax \le b\)</td><td>Yes</td><td>Nonnegative sum of norms</td></tr>
+        <tr><td>Ball circumscription: \(\min \rho\) s.t. \(\|x - c_i\| \le \rho\)</td><td>Yes</td><td>Each constraint \(\|x - c_i\| - \rho \le 0\) is convex</td></tr>
+        <tr><td>QCQP with \(A_i^\top A_i\) form: \((A_ix + b_i)^\top(A_ix + b_i) - c_i^\top x - d_i \le 0\)</td><td>Yes</td><td>A squared norm of an affine function plus a linear term</td></tr>
+        <tr><td>Portfolio: \(\min x^\top \Sigma x\) with linear constraints</td><td>Yes</td><td>A covariance matrix is positive semidefinite</td></tr>
+        <tr><td>Floor planning with \(w_i h_i \ge A_i\)</td><td>Not as written</td><td>The constraint function \(A_i - w_ih_i\) is not convex. The set it describes (with \(w_i, h_i &gt; 0\)) is convex though, and writing it as \(h_i \ge A_i/w_i\) puts it in convex form. The aspect ratio bounds are linear: \(l_iw_i \le h_i \le u_iw_i\).</td></tr>
+      </tbody>
+    </table></div>
+    <details class="more"><summary>Why a covariance matrix is positive semidefinite</summary><div>
+      <p>For any vector \(u\), \(u^\top \Sigma u = \mathrm{Var}\big(\sum_j u_j r_j\big) \ge 0\). A variance can never be negative.</p>
+    </div></details>
+  </section>
+
+  <section class="block" id="theorem">
+    <h2>Local is global</h2>
+    <div class="box theorem">
+      <span class="label">Theorem</span>
+      <p>Let \(\mathcal{F}\) be a convex set and \(f : \mathcal{F} \to \mathbb{R}\) a convex function. If \(x^*\) is a local minimum of \(\min_{x \in \mathcal{F}} f(x)\), then \(x^*\) is a global minimum.</p>
+    </div>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Proof">
+        <p>Suppose not: some \(y \in \mathcal{F}\) has \(f(y) &lt; f(x^*)\). For \(\lambda \in (0, 1)\), convexity of \(f\) gives</p>
+        <div class="math-block">\[ f(\lambda x^* + (1 - \lambda) y) \le \lambda f(x^*) + (1 - \lambda) f(y) &lt; f(x^*). \]</div>
+        <p>Because \(\mathcal{F}\) is convex, every point \(\lambda x^* + (1 - \lambda)y\) is feasible. As \(\lambda \to 1\) these points get arbitrarily close to \(x^*\). So every ball around \(x^*\) contains a feasible point with a strictly smaller value, and \(x^*\) is not a local minimum. Contradiction.</p>
+      </div>
+      <div class="tab-panel" data-tab="Picture">
+        <p>Walk from \(x^*\) towards the better point \(y\) in a straight line. Convexity of the set keeps you feasible. Convexity of the function keeps the values below the straight line between \(f(x^*)\) and \(f(y)\), which slopes downward right from the start. So \(x^*\) could not have been at the bottom of its neighbourhood.</p>
+      </div>
+      <div class="tab-panel" data-tab="Why it matters">
+        <p>Algorithms only see locally. Gradient descent (class 18) and its relatives can certify a local minimum, never directly a global one. For convex problems that is enough. For non-convex problems a local method can get stuck, and finding the global minimum is very hard in general.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="landscape">
+    <h2>Easier and harder</h2>
+    <ul>
+      <li><strong>Convex problems can be solved efficiently,</strong> because local optima are global.</li>
+      <li><strong>Some convex problems are easier than others.</strong> LP is easier than SOCP, which is easier than SDP. Structure still matters for which solver and algorithm to use.</li>
+      <li><strong>Non-convex problems are much harder.</strong> Integer programs (classes 10 to 12) are non-convex, which is why they needed branch-and-cut.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Convex problem: convex objective, convex \(\le\) constraints, linear equalities. Its feasible region is convex.</li>
+      <li>LP, Fermat-Weber, ball circumscription, convex QCQP and portfolio optimization are all convex.</li>
+      <li>For convex problems, every local minimum is a global minimum.</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>"Is this a convex optimization problem? Justify briefly." Check the three ingredients one by one, and name the rule that makes each function convex (norm, sum, max, PSD quadratic). Last year's portfolio projection problem, \(\min \tfrac12\|x - a\|_2^2\) s.t. \(\sum_i x_i = 1,\ x \ge 0\), is convex: a convex quadratic over a polyhedron.</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">Which constraint keeps a problem convex (with \(x \in \mathbb{R}^2\))?</div>
+      <div class="opts">
+        <button class="opt">\(x_1^2 + x_2^2 = 1\)</button>
+        <button class="opt">\(x_1^2 + x_2^2 \ge 1\)</button>
+        <button class="opt" data-correct>\(x_1^2 + x_2^2 \le 1\)</button>
+      </div>
+      <div class="feedback">Only the disc \(\le 1\) is a convex set. The circle (\(= 1\)) and the outside of the disc (\(\ge 1\)) are not.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="convexity.html"><small>Previous · 17b</small>Problem classes and convexity</a>
+    <a class="next" href="./#flashcards"><small>Finish with</small>Flashcards and practice questions</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 17, slides 30 to 34 · BV 4.1 and 4.2</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

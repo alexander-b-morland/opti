@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class 17 · Non-linear optimization modeling · Opti</title>
+<meta name="description" content="Non-linear optimization modeling: applications, problem classes, convex sets and functions, and why convex problems are tractable.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="/">&larr; All classes</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 17 · Non-linear optimization</p>
+  <h1>Non-linear <em>modeling</em></h1>
+  <p class="lede">Most real relationships are curved: risk, distance, error, area. This class shows how to write them as optimization problems, and how to tell the tractable ones (convex) from the hard ones.</p>
+</header>
+
+<nav class="chapter-toc" aria-label="On this page"><div class="container">
+  <ol>
+    <li><a href="#big-picture"><span>01</span>Big picture</a></li>
+    <li><a href="#parts"><span>02</span>Parts</a></li>
+    <li><a href="#flashcards"><span>03</span>Flashcards</a></li>
+    <li><a href="#quiz"><span>04</span>Test yourself</a></li>
+  </ol>
+</div></nav>
+
+<main class="container">
+<section class="block" id="big-picture">
+  <span class="section-badge">Overview</span>
+  <h2>The big picture</h2>
+  <p class="lead">Classes 1 to 16 lived mostly in the linear world. Class 17 opens the last module of the course: non-linear optimization. Before any algorithm, two questions: how do non-linear models look, and which of them can we hope to solve?</p>
+  <div class="tabs">
+    <div class="tab-panel" data-tab="Analogy">
+      <p class="analogy">Imagine searching for the lowest point of a landscape in the dark. In a single smooth bowl, walking downhill always gets you to the bottom. In a mountain range full of valleys, walking downhill gets you to the bottom of whichever valley you started in. Convex problems are the bowl. Non-convex problems are the range.</p>
+    </div>
+    <div class="tab-panel" data-tab="In one formula">
+      <div class="math-block">\[ \min\ f(x) \quad \text{s.t.}\quad g_i(x) \le 0,\quad Ax = b, \qquad f, g_i \text{ convex} \ \Longrightarrow\ \text{local optimum} = \text{global optimum}. \]</div>
+    </div>
+    <div class="tab-panel" data-tab="Why it matters">
+      <p>Machine learning, finance, engineering design and logistics all run on non-linear models. Recognizing convexity tells you whether a solver's answer can be trusted as the best possible, or only as a good local one. Classes 18 to 20 then build the algorithms.</p>
+    </div>
+  </div>
+
+  <h3>The story of the class in three steps</h3>
+  <div class="flow three">
+    <div class="step"><b>17a · Models</b><span>Approximation, regression, portfolios, location, floor plans, ride-sharing.</span></div>
+    <div class="step"><b>17b · Convexity</b><span>Problem classes, convex sets and functions, how to recognize them.</span></div>
+    <div class="step"><b>17c · Payoff</b><span>Convex problems: every local minimum is global.</span></div>
+  </div>
+
+  <div class="callout">
+    <span class="label">Takeaways from the lecture</span>
+    <ol style="margin:0">
+      <li>Convex and non-linear optimization are powerful modeling frameworks.</li>
+      <li>Non-linear optimization covers a vast range of problem classes, with consequences for modeling and algorithms.</li>
+      <li>Convex problems can be solved efficiently, because local optima are global.</li>
+      <li>Some convex problems are easier than others. Non-convex problems are much harder.</li>
+    </ol>
+  </div>
+
+  <h3>For your note sheet</h3>
+  <div class="sheet">
+    <div><b>Approximation</b>\(\min \|Ax - b\|\): 2-norm (least squares), 1-norm (robust to outliers), \(\infty\)-norm (minimax).</div>
+    <div><b>Convex function tests</b>Chord above. Tangent below: \(f(y) \ge f(x) + \nabla f(x)^\top(y - x)\). Hessian \(\succeq 0\) everywhere.</div>
+    <div><b>Convexity rules</b>Nonnegative sums, affine substitution, pointwise max, convex non-decreasing \(\circ\) convex, norms.</div>
+    <div><b>Convex problem</b>Convex \(f\), convex \(g_i \le 0\), linear equalities. Local min = global min.</div>
+  </div>
+</section>
+
+<section class="block" id="parts">
+  <span class="section-badge">Parts</span>
+  <h2>Explore the class</h2>
+  <div class="subpage-list">
+    <a class="subpage-card" href="applications.html"><span class="sp-num">17a</span><div><div class="sp-title">A tour of non-linear models</div><div class="sp-desc">Approximation with norms, regression, denoising, geometry, portfolios, plant location, floor planning, ride-sharing</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="convexity.html"><span class="sp-num">17b</span><div><div class="sp-title">Problem classes and convexity</div><div class="sp-desc">QP to SDP, local versus global, convex sets and functions, first- and second-order tests</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="convex-optimization.html"><span class="sp-num">17c</span><div><div class="sp-title">Convex optimization</div><div class="sp-desc">What makes a problem convex, which models are, and the local-equals-global theorem</div></div><span class="sp-arrow">&rarr;</span></a>
+  </div>
+</section>
+
+<section class="block flashcards-section" id="flashcards">
+  <span class="section-badge">Quick review</span>
+  <h2>Flashcards</h2>
+  <p>Click a card to flip it. Arrow keys move between cards once a card has focus.</p>
+  <div class="flashcards">
+<script type="application/json">
+[
+ {"q": "What is the approximation problem?", "a": "\\(\\min \\{\\|Ax - b\\| : x \\in X\\}\\): make \\(Ax\\) as close as possible to \\(b\\). The norm defines closeness."},
+ {"q": "Least squares, absolute residuals, minimax: which norm is which?", "a": "Least squares: 2-norm (squared). Absolute residuals: 1-norm. Minimax: \\(\\infty\\)-norm."},
+ {"q": "Which approximation is most robust to outliers?", "a": "The 1-norm. It penalizes errors linearly, while the 2-norm squares them and the \\(\\infty\\)-norm looks only at the worst one."},
+ {"q": "Write the portfolio optimization model.", "a": "\\(\\min x^\\top \\Sigma x\\) s.t. \\(\\sum_i x_i \\le B\\), \\(\\sum_i \\mu_i x_i \\ge \\rho\\), \\(x \\ge 0\\). Variance as risk, a return target, a budget, no short sales."},
+ {"q": "Fermat-Weber versus ball circumscription?", "a": "Fermat-Weber: \\(\\min \\sum_i w_i \\|x - c_i\\|\\) (total distance). Ball circumscription: \\(\\min \\rho\\) s.t. \\(\\|x - c_i\\| \\le \\rho\\) (worst distance). Both convex."},
+ {"q": "Where is the non-linearity in floor planning?", "a": "In the area constraint \\(w_ih_i \\ge A_i\\), a product of two variables (and in distance constraints with norms)."},
+ {"q": "Name the main classes of non-linear problems.", "a": "QP, QCQP, SOCP, SDP and general NLP."},
+ {"q": "When is a QP convex?", "a": "\\(\\min x^\\top Qx + c^\\top x\\) over a polyhedron is convex when \\(Q \\succeq 0\\)."},
+ {"q": "Define a convex set.", "a": "\\(S\\) is convex if \\(\\lambda x + (1 - \\lambda)y \\in S\\) for all \\(x, y \\in S\\), \\(\\lambda \\in [0, 1]\\). Intersections of convex sets are convex."},
+ {"q": "Define a convex function.", "a": "\\(f(\\lambda x + (1 - \\lambda)y) \\le \\lambda f(x) + (1 - \\lambda) f(y)\\). Chords lie above the graph. Concave: \\(-f\\) convex."},
+ {"q": "First-order condition for convexity?", "a": "A differentiable \\(f\\) is convex iff \\(f(y) \\ge f(x) + \\nabla f(x)^\\top (y - x)\\) for all \\(x, y\\): tangents are global underestimators."},
+ {"q": "Second-order condition for convexity?", "a": "A twice continuously differentiable \\(f\\) is convex iff \\(\\nabla^2 f(x) \\succeq 0\\) for all \\(x\\)."},
+ {"q": "List the convexity-preserving operations.", "a": "Nonnegative weighted sums, affine substitution \\(f(Ay + b)\\), pointwise maximum, \\(h(g(x))\\) with \\(h\\) convex non-decreasing and \\(g\\) convex. Norms are convex."},
+ {"q": "What is a convex optimization problem?", "a": "Minimize a convex \\(f\\) subject to convex constraints \\(g_i(x) \\le 0\\) and linear equalities \\(Ax = b\\)."},
+ {"q": "Why must equality constraints be linear?", "a": "A non-linear equality such as \\(x_1^2 + x_2^2 = 1\\) defines a non-convex set (a circle), even when the function is convex."},
+ {"q": "Local versus global in convex optimization?", "a": "Every local minimum is a global minimum. Proof: a strictly better feasible point would give strictly better feasible points arbitrarily close to the local minimum."}
+]
+</script>
+  </div>
+</section>
+
+<section class="block" id="quiz">
+  <span class="section-badge">Exam practice</span>
+  <h2>Test yourself</h2>
+  <p>Multiple choice in the style of the midterm. Say your one-line justification before you click.</p>
+
+  <div class="quiz">
+    <div class="q-label">Question 1 · Convexity</div>
+    <div class="q-text">Is \(\min \tfrac12\|x - a\|_2^2\) s.t. \(\sum_i x_i = 1,\ x \ge 0\) a convex optimization problem?</div>
+    <div class="opts">
+      <button class="opt" data-correct>Yes: a convex quadratic objective over a polyhedron.</button>
+      <button class="opt">No: the objective is quadratic.</button>
+      <button class="opt">Only if \(a \ge 0\).</button>
+    </div>
+    <div class="feedback">The Hessian of the objective is \(I \succ 0\), so it is convex. The constraints are linear. The data \(a\) does not matter.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 2 · Recognizing convexity</div>
+    <div class="q-text">Which function is not convex?</div>
+    <div class="opts">
+      <button class="opt">\(f(x) = \max_i \|x - c_i\|\)</button>
+      <button class="opt">\(f(x) = e^{x_1 + 2x_2}\)</button>
+      <button class="opt" data-correct>\(f(x) = x_1^2 - x_2^2\)</button>
+    </div>
+    <div class="feedback">\(x_1^2 - x_2^2\) has Hessian \(\mathrm{diag}(2, -2)\), which is indefinite: a saddle. The first is a max of norms. The second is a convex non-decreasing function of an affine function.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 3 · Feasible regions</div>
+    <div class="q-text">\(g\) is convex. Which constraint can make the feasible region non-convex?</div>
+    <div class="opts">
+      <button class="opt">\(g(x) \le 5\)</button>
+      <button class="opt" data-correct>\(g(x) \ge 5\)</button>
+      <button class="opt">\(a^\top x = 5\)</button>
+    </div>
+    <div class="feedback">Sublevel sets \(\{g \le 5\}\) of a convex function are convex. Superlevel sets are not in general: \(\|x\|_2 \ge 5\) is the outside of a disc.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 4 · Global optimality</div>
+    <div class="q-text">An algorithm returns a local minimum of a convex function over a convex set. What can you conclude?</div>
+    <div class="opts">
+      <button class="opt">Nothing without second-order information.</button>
+      <button class="opt" data-correct>It is a global minimum.</button>
+      <button class="opt">It is the unique global minimum.</button>
+    </div>
+    <div class="feedback">Local equals global for convex problems. Uniqueness would need strict convexity.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 5 · Portfolio</div>
+    <div class="q-text">Why is the portfolio variance \(x^\top \Sigma x\) a convex function?</div>
+    <div class="opts">
+      <button class="opt">Because all covariances are positive.</button>
+      <button class="opt" data-correct>Because a covariance matrix is positive semidefinite: \(u^\top \Sigma u\) is the variance of a portfolio, which is never negative.</button>
+      <button class="opt">Because \(x \ge 0\).</button>
+    </div>
+    <div class="feedback">Covariances can be negative. What matters is \(\Sigma \succeq 0\), which holds for every covariance matrix.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 6 · Modeling</div>
+    <div class="q-text">You place an ambulance base so that no neighbourhood is too far away. Which model fits?</div>
+    <div class="opts">
+      <button class="opt">Fermat-Weber: minimize total weighted distance.</button>
+      <button class="opt" data-correct>Ball circumscription: minimize the maximum distance.</button>
+      <button class="opt">Least squares on the coordinates.</button>
+    </div>
+    <div class="feedback">"No neighbourhood too far" is a worst-case requirement, so minimize the largest distance. Fermat-Weber would sacrifice remote areas for a good average.</div>
+  </div>
+
+  <p class="quiz-score" aria-live="polite"></p>
+</section>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 17 · BV chapters 2 to 4 and 6</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>
