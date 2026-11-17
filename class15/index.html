@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class 15 · Adaptive optimization · Opti</title>
+<meta name="description" content="Two-stage stochastic optimization, Benders decomposition, and the value of the stochastic solution and of perfect information.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="/">&larr; All classes</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 15 · Optimization under uncertainty</p>
+  <h1>Adaptive <em>optimization</em></h1>
+  <p class="lede">Decide what must be decided now, and plan how to react to every possible future. Then solve the resulting giant model by splitting it into a master problem and one small problem per scenario.</p>
+</header>
+
+<nav class="chapter-toc" aria-label="On this page"><div class="container">
+  <ol>
+    <li><a href="#big-picture"><span>01</span>Big picture</a></li>
+    <li><a href="#parts"><span>02</span>Parts</a></li>
+    <li><a href="#flashcards"><span>03</span>Flashcards</a></li>
+    <li><a href="#quiz"><span>04</span>Test yourself</a></li>
+  </ol>
+</div></nav>
+
+<main class="container">
+<section class="block" id="big-picture">
+  <span class="section-badge">Overview</span>
+  <h2>The big picture</h2>
+  <p class="lead">Robust optimization made one decision that had to survive the worst case. Adaptive optimization recognizes that many decisions can wait until the uncertainty is resolved, and optimizes the expected outcome.</p>
+  <div class="tabs">
+    <div class="tab-panel" data-tab="Analogy">
+      <p class="analogy">You book a venue for a conference months in advance, without knowing how many people will register. Catering, chairs and staff can be ordered the week before, once registrations are in. The venue is the here-and-now decision. Catering is wait-and-see. A good venue choice accounts for how expensive it will be to cater for 50, 200 or 500 people in it.</p>
+    </div>
+    <div class="tab-panel" data-tab="In one formula">
+      <div class="math-block">\[ \min_x\ c^\top x + \sum_s \pi_s\, Q_s(x), \qquad Q_s(x) = \min_{y_s \ge 0} \{ f_s^\top y_s : V y_s = w_s - U_s x \}. \]</div>
+      <p>Choose \(x\) now. In each scenario \(s\), react optimally with \(y_s\). Minimize today's cost plus the expected cost of reacting.</p>
+    </div>
+    <div class="tab-panel" data-tab="Why it matters">
+      <p>In the lecture's facility location case, planning for average demand costs $1,528M in expectation. The adaptive plan costs $1,083M, a 29% saving, mostly by avoiding shortages. Benders decomposition solves the model with 1,000 scenarios to proven optimality where the direct approach times out.</p>
+    </div>
+  </div>
+
+  <h3>The story of the class in three steps</h3>
+  <div class="flow three">
+    <div class="step"><b>15a · Model</b><span>First stage now, second stage per scenario, expected cost.</span></div>
+    <div class="step"><b>15b · Solve</b><span>Benders: master problem plus scenario subproblems, joined by cuts.</span></div>
+    <div class="step"><b>15c · Value</b><span>VSS and EVPI: what adapting is worth, and what information would be worth.</span></div>
+  </div>
+
+  <div class="callout">
+    <span class="label">Takeaways from the lecture</span>
+    <ol style="margin:0">
+      <li>Adaptive optimization models sequential decision-making under uncertainty.</li>
+      <li>Benders decomposition exploits the block-angular structure using duality and convexity.</li>
+      <li>It alternates a master problem (first-stage solution) and a subproblem (an optimality cut).</li>
+      <li>It is exact and finite, and keeps an optimality gap until convergence.</li>
+      <li>Adaptive solutions add real value over one-stage benchmarks.</li>
+    </ol>
+  </div>
+
+  <h3>For your note sheet</h3>
+  <div class="sheet">
+    <div><b>Two-stage model</b>\(\min c^\top x + \sum_s \pi_s f_s^\top y_s\)<br>\(Ax = b,\ U_s x + V y_s = w_s\ \forall s\)<br>\(x\): no index \(s\). \(y_s\): one copy per scenario.</div>
+    <div><b>Recourse</b>\(Q_s(x) = \max_p \{(w_s - U_s x)^\top p : V^\top p \le f_s\}\)<br>Convex, piecewise linear in \(x\).</div>
+    <div><b>Benders</b>Master: \(\min c^\top x + \theta\), \(\theta \ge (w - Ux)^\top q^v\) for known cuts. LB = master value. UB = \(c^\top x_t + f^\top y_t\). Stop when \(\theta_t = f^\top y_t\).</div>
+    <div><b>Value measures</b>WS \(\le\) Adaptive \(\le\) Deterministic.<br>VSS = Det − Adaptive. EVPI = Adaptive − WS.</div>
+  </div>
+</section>
+
+<section class="block" id="parts">
+  <span class="section-badge">Parts</span>
+  <h2>Explore the class</h2>
+  <div class="subpage-list">
+    <a class="subpage-card" href="two-stage.html"><span class="sp-num">15a</span><div><div class="sp-title">Here and now, wait and see</div><div class="sp-desc">First- and second-stage decisions, adaptive facility location, block structure, the recipe for exam questions</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="benders.html"><span class="sp-num">15b</span><div><div class="sp-title">Benders decomposition</div><div class="sp-desc">The recourse function, cuts from duality, master and subproblem, bounds, scenario decomposition</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="value.html"><span class="sp-num">15c</span><div><div class="sp-title">The value of adapting</div><div class="sp-desc">Deterministic, adaptive and wait-and-see plans, VSS and EVPI, the facility location numbers</div></div><span class="sp-arrow">&rarr;</span></a>
+  </div>
+</section>
+
+<section class="block flashcards-section" id="flashcards">
+  <span class="section-badge">Quick review</span>
+  <h2>Flashcards</h2>
+  <p>Click a card to flip it. Arrow keys move between cards once a card has focus.</p>
+  <div class="flashcards">
+<script type="application/json">
+[
+ {"q": "Here-and-now versus wait-and-see decisions?", "a": "Here and now (first stage): made before the uncertainty is revealed, the same in every scenario. Wait and see (second stage): made after, one value per scenario."},
+ {"q": "What is non-anticipativity?", "a": "First-stage decisions cannot depend on which scenario will happen. In the model, first-stage variables carry no scenario index."},
+ {"q": "Write the adaptive facility location objective.", "a": "\\(\\min \\sum_j c_j x_j + \\sum_s \\pi_s \\big(\\sum_{i,j} t_{ij} y_{ijs} + \\sum_i u_i z_{is}\\big)\\)."},
+ {"q": "How do constraints change in the two-stage model?", "a": "Every constraint involving second-stage variables is copied for each scenario with that scenario's data. Constraints with only first-stage variables stay once."},
+ {"q": "What is the block-angular structure?", "a": "Each scenario has its own block \\(V y_s\\). The first-stage \\(x\\) appears in every block (\\(U_s x\\)) and is the only link between them."},
+ {"q": "Define the recourse function.", "a": "\\(Q(x) = \\sum_s \\pi_s Q_s(x)\\) with \\(Q_s(x) = \\min\\{f_s^\\top y_s : V y_s = w_s - U_s x,\\ y_s \\ge 0\\}\\): the expected future cost given today's decision."},
+ {"q": "Why is \\(Q(x)\\) convex and piecewise linear?", "a": "By duality \\(Q(x) = \\max_v (w - Ux)^\\top q^v\\) over the dual extreme points, which do not depend on \\(x\\). A max of linear functions is convex and piecewise linear."},
+ {"q": "What is a Benders cut?", "a": "\\(\\theta \\ge (w - Ux)^\\top q^v\\) for a dual extreme point \\(q^v\\) found by the subproblem. It is valid for every \\(x\\)."},
+ {"q": "What is relatively complete recourse?", "a": "For every first-stage \\(x\\) with \\(Ax = b\\), the second-stage problem is feasible. (Unmet demand variables guarantee this in facility location.)"},
+ {"q": "Benders lower and upper bounds?", "a": "LB = master value \\(c^\\top x_t + \\theta_t\\) (relaxation). UB = \\(c^\\top x_t + f^\\top y_t\\) (a feasible plan). Stop when \\(\\theta_t = f^\\top y_t\\)."},
+ {"q": "Why does Benders terminate?", "a": "There are finitely many dual extreme points, and every iteration that does not stop adds a new one. So it ends after finitely many iterations with an optimal solution."},
+ {"q": "How do many scenarios help Benders?", "a": "The subproblem splits into one LP per scenario, which can be solved in parallel. The cut aggregates them weighted by \\(\\pi_s\\)."},
+ {"q": "Define VSS.", "a": "Value of the stochastic solution = expected cost of the deterministic (average-scenario) plan minus that of the adaptive plan. The value of flexibility."},
+ {"q": "Define EVPI.", "a": "Expected value of perfect information = adaptive cost minus wait-and-see cost. The cost of committing before information arrives."},
+ {"q": "Order the three plans by expected cost.", "a": "Wait and see \\(\\le\\) adaptive \\(\\le\\) deterministic."}
+]
+</script>
+  </div>
+</section>
+
+<section class="block" id="quiz">
+  <span class="section-badge">Exam practice</span>
+  <h2>Test yourself</h2>
+  <p>Multiple choice in the style of the midterm. Say your one-line justification before you click.</p>
+
+  <div class="quiz">
+    <div class="q-label">Question 1 · Modeling</div>
+    <div class="q-text">Bioreactor lines \(x_i \in \{0,1\}\) must be leased before profits are known. Production \(y_{ij}\) and product volumes \(z_k\) can wait. In the two-stage model with scenarios \(s\), which variables get a scenario index?</div>
+    <div class="opts">
+      <button class="opt">All of them.</button>
+      <button class="opt" data-correct>\(y_{ij}\) and \(z_k\), not \(x_i\).</button>
+      <button class="opt">Only \(x_i\).</button>
+    </div>
+    <div class="feedback">Leasing is here and now, so \(x_i\) stays scenario-independent. Production and formulation adapt to each scenario: \(y_{ijs}\), \(z_{ks}\).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 2 · Constraints</div>
+    <div class="q-text">The deterministic model has the constraint \(y_{ij} \le A_i x_i\) linking lines and production. In the two-stage model it becomes:</div>
+    <div class="opts">
+      <button class="opt">\(\sum_s y_{ijs} \le A_i x_i\)</button>
+      <button class="opt" data-correct>\(y_{ijs} \le A_i x_i\) for every scenario \(s\).</button>
+      <button class="opt">\(\mathbb{E}(y_{ijs}) \le A_i x_i\)</button>
+    </div>
+    <div class="feedback">Second-stage constraints must hold in every single scenario, not on average or in total.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 3 · Benders bounds</div>
+    <div class="q-text">In Benders decomposition for a minimization problem, the master problem value at iteration \(t\) is:</div>
+    <div class="opts">
+      <button class="opt" data-correct>A lower bound on the optimal value, non-decreasing in \(t\).</button>
+      <button class="opt">An upper bound, non-increasing in \(t\).</button>
+      <button class="opt">Exactly the optimal value from the first iteration on.</button>
+    </div>
+    <div class="feedback">The master knows only some cuts, so it underestimates the recourse. Adding cuts can only raise its value.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 4 · Stopping</div>
+    <div class="q-text">Benders stops when:</div>
+    <div class="opts">
+      <button class="opt">The master problem becomes infeasible.</button>
+      <button class="opt" data-correct>The master's estimate \(\theta_t\) equals the true second-stage cost \(f^\top y_t\) at \(x_t\).</button>
+      <button class="opt">Every scenario has produced exactly one cut.</button>
+    </div>
+    <div class="feedback">Then the lower and upper bounds coincide. (An infeasible master means the whole problem is infeasible, which is a different kind of stop.)</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 5 · Value</div>
+    <div class="q-text">Which inequality always holds for expected costs in a minimization problem?</div>
+    <div class="opts">
+      <button class="opt">Adaptive \(\le\) wait and see \(\le\) deterministic.</button>
+      <button class="opt" data-correct>Wait and see \(\le\) adaptive \(\le\) deterministic.</button>
+      <button class="opt">Deterministic \(\le\) adaptive \(\le\) wait and see.</button>
+    </div>
+    <div class="feedback">The deterministic first-stage plan is one feasible choice for the adaptive model, so adaptive is at most deterministic. Wait and see relaxes non-anticipativity, so it is at most adaptive.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 6 · Interpretation</div>
+    <div class="q-text">A planner finds EVPI is large but VSS is zero. What does that mean?</div>
+    <div class="opts">
+      <button class="opt">The stochastic model is wrong.</button>
+      <button class="opt" data-correct>Planning for the average already gives the best first-stage decision, but better forecasts would still be valuable.</button>
+      <button class="opt">Perfect information would not change anything.</button>
+    </div>
+    <div class="feedback">VSS = 0: the adaptive and deterministic first stages perform equally. Large EVPI: committing before the uncertainty resolves is costly, so information (or delaying the decision) has value.</div>
+  </div>
+
+  <p class="quiz-score" aria-live="polite"></p>
+</section>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 15 · BT 6.5</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>15b Benders decomposition · Opti</title>
+<meta name="description" content="The recourse function, its dual representation, Benders cuts, the master and subproblem, lower and upper bounds, and the facility location results.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/adaptive.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 15: Adaptive optimization</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 15 · Part b</p>
+  <h1>Benders <em>decomposition</em></h1>
+  <p class="lede">Split the problem in two. A master problem chooses the first-stage decision with a rough picture of the future. Subproblems, one per scenario, report the true future cost and how it changes, as a linear cut.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#recourse">The recourse function</a></li>
+      <li><a href="#dual">Looking at the future through duality</a></li>
+      <li><a href="#reformulation">The Benders reformulation</a></li>
+      <li><a href="#algorithm">The algorithm</a></li>
+      <li><a href="#watch">Watch the cuts</a></li>
+      <li><a href="#scenarios">One subproblem per scenario</a></li>
+      <li><a href="#results">Facility location results</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="recourse">
+    <h2>The recourse function</h2>
+    <p>Fix the first-stage decision \(x\). What remains is a separate linear program for each scenario:</p>
+    <div class="math-block">\[ Q_s(x) = \min_{y_s \ge 0} \{ f_s^\top y_s : V y_s = w_s - U_s x \}, \qquad Q(x) = \sum_{s} \pi_s Q_s(x). \]</div>
+    <p>\(Q(x)\) is the <strong>recourse function</strong>: the expected cost of the future, given today's decision. The whole problem becomes</p>
+    <div class="math-block">\[ \min_x\ c^\top x + Q(x) \quad \text{s.t.}\quad Ax = b,\ \ x \in \mathbb{Z}_+^r \times \mathbb{R}_+^{n_1 - r}. \]</div>
+    <p>This is the trade-off between present and future cost. A conservative strategy invests little today and pays more later. An aggressive one invests more today and benefits later. The challenge: \(Q\) is not known as a formula. We can only evaluate it at a given \(x\), by solving the subproblems.</p>
+  </section>
+
+  <section class="block" id="dual">
+    <h2>Looking at the future through duality</h2>
+    <p>Take one scenario and drop the index \(s\). By LP duality,</p>
+    <div class="math-block">\[ Q(x) = \max_p\ \{ (w - Ux)^\top p : V^\top p \le f \}. \]</div>
+    <p>The key observation: the dual feasible region \(\{p : V^\top p \le f\}\) <strong>does not depend on \(x\)</strong>. Only the objective does. A linear program attains its optimum at an extreme point, so if \(q^v,\ v \in \mathcal{V}\) are the extreme points of that polyhedron,</p>
+    <div class="math-block">\[ Q(x) = \max_{v \in \mathcal{V}} (w - Ux)^\top q^v \qquad\text{so}\qquad Q(x) \ge (w - Ux)^\top q^v \ \text{ for every } v. \]</div>
+    <p>\(Q\) is the maximum of finitely many linear functions of \(x\): convex and piecewise linear. Each extreme point gives one linear piece, called a <strong>Benders cut</strong>.</p>
+    <div class="box">
+      <span class="label">Assumptions</span>
+      <p>The first- and second-stage feasible regions are bounded. And the problem has <strong>relatively complete recourse</strong>: for every first-stage \(x\) with \(Ax = b\), the second-stage problem has a feasible \(y\). (In facility location, unmet demand \(z\) guarantees this.)</p>
+    </div>
+  </section>
+
+  <section class="block" id="reformulation">
+    <h2>The Benders reformulation</h2>
+    <p>Replace \(Q(x)\) by a variable \(\theta\) that must lie above every cut:</p>
+    <div class="box theorem">
+      <span class="label">Theorem</span>
+      <p>Under the assumptions, the problem is equivalent to</p>
+      <div class="math-block">\[ \begin{aligned} \min_{x,\, \theta}\ & c^\top x + \theta \\ \text{s.t. } & Ax = b \\ & \theta \ge (w - Ux)^\top q^v, && v \in \mathcal{V} \\ & x \in \mathbb{Z}_+^r \times \mathbb{R}_+^{n_1 - r}. \end{aligned} \]</div>
+    </div>
+    <p>Far fewer variables (no \(y\) at all), but one constraint per extreme point: exponentially many. So, just like in class 14, we generate constraints only when needed. Benders decomposition <em>is</em> a cutting planes (row generation) method.</p>
+  </section>
+
+  <section class="block" id="algorithm">
+    <h2>The algorithm</h2>
+    <div class="algo">
+      <span class="label">Algorithm · Benders decomposition</span>
+      <ol>
+        <li>Initialize \(t = 1\) and an empty set of cuts \(\mathcal{V}^{(1)} = \emptyset\).</li>
+        <li><strong>Master problem:</strong> solve \(\min c^\top x + \theta\) with \(Ax = b\) and only the cuts in \(\mathcal{V}^{(t)}\).
+          <ol>
+            <li>If infeasible, stop: the full problem is infeasible.</li>
+            <li>Otherwise get \((x_t, \theta_t)\). Lower bound \(LB = c^\top x_t + \theta_t\).</li>
+          </ol>
+        </li>
+        <li><strong>Subproblem:</strong> solve the second stage at \(x_t\). Get the primal \(y_t\) and the dual \(p_t = q^{v_t}\). Upper bound \(UB = c^\top x_t + f^\top y_t\).</li>
+        <li><strong>Optimality check:</strong> if \(f^\top y_t = \theta_t\), stop: \((x_t, y_t)\) is optimal. Otherwise add the cut \(\theta \ge (w - Ux)^\top q^{v_t}\), set \(t \leftarrow t + 1\) and go to step 2.</li>
+      </ol>
+    </div>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Why a lower bound?">
+        <p>The master only knows some of the cuts, so its \(\theta\) underestimates the true future cost. It is a relaxation of a minimization problem, and its value can only go up as cuts are added.</p>
+      </div>
+      <div class="tab-panel" data-tab="Why an upper bound?">
+        <p>\((x_t, y_t)\) is an actual feasible plan, and \(c^\top x_t + f^\top y_t\) is its true cost. Any feasible plan's cost is at least the optimum.</p>
+      </div>
+      <div class="tab-panel" data-tab="Why it stops">
+        <p>When \(\theta_t = Q(x_t)\), the master's picture of the future is exact at its own solution, so the bounds meet. There are finitely many extreme points and each new cut is different, so the algorithm terminates in a finite number of iterations with an optimal solution.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="watch">
+    <h2>Watch the cuts</h2>
+    <div class="widget" data-widget="benders">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Benders on the one-facility example</h4><p>The gold curve is the true recourse \(Q(x)\) from part a (shortage cost 4). Each cut is a line touching \(Q\) at the master's current \(x\). The master trusts the dashed approximation, the maximum of the cuts.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>The first master ignores the future entirely and builds nothing. Each cut teaches it the slope of the future cost at its last guess. After a few iterations the approximation is exact where it matters, at the optimum, even though it is still rough elsewhere.</p>
+  </section>
+
+  <section class="block" id="scenarios">
+    <h2>One subproblem per scenario</h2>
+    <p>With many scenarios, the second stage splits into \(S\) independent subproblems, which can be solved in parallel. The master gets one cut per scenario, weighted by its probability:</p>
+    <div class="math-block">\[ \theta \ge \sum_{s \in \mathcal{S}} \pi_s (w_s - U_s x)^\top q_s^{v_s}. \]</div>
+    <h3>In facility location</h3>
+    <p>The subproblem for scenario \(s\) fixes the built facilities \(x\) and solves the transport problem. Its dual has a variable \(\lambda_{js} \ge 0\) for each capacity constraint and \(\mu_{is} \ge 0\) for each demand constraint:</p>
+    <div class="math-block">\[ \max_{\lambda, \mu \ge 0}\ -\sum_j C_j x_j \lambda_{js} + \sum_i d_{is}\mu_{is} \quad \text{s.t.}\quad -\lambda_{js} + \mu_{is} \le t_{ij}\ \ \forall i, j, \qquad \mu_{is} \le u_i\ \ \forall i. \]</div>
+    <p>The dual constraints do not contain \(x\), as promised. The cut tells the master: each unit of capacity at facility \(j\) is worth \(\lambda_{js}\) in scenario \(s\).</p>
+  </section>
+
+  <section class="block" id="results">
+    <h2>Facility location results</h2>
+    <p>The lecture compares solving the full model directly with Benders, with a time limit of 1,800 seconds:</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Scenarios</th><th>Direct: solution / bound / time</th><th>Benders: solution / bound / time</th></tr></thead>
+      <tbody>
+        <tr><td>100</td><td>1,298 / 1,298 / 204 s</td><td>1,298 / 1,298 / 152 s</td></tr>
+        <tr><td>500</td><td>1,334 / 1,319 / 1,800 s</td><td>1,321 / 1,321 / 407 s</td></tr>
+        <tr><td>1,000</td><td>1,326 / 1,257 / 1,800 s</td><td>1,265 / 1,265 / 860 s</td></tr>
+      </tbody>
+    </table></div>
+    <p>With few scenarios both methods work. As \(S\) grows, the direct approach hits the time limit with a gap between its solution and its lower bound, while Benders proves optimality in a fraction of the time.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>The recourse function \(Q(x)\) is convex and piecewise linear, the maximum of linear pieces from the dual extreme points.</li>
+      <li>Benders replaces \(Q\) by \(\theta\) and adds cuts on demand: a master problem for the first stage, subproblems for the second.</li>
+      <li>Master value: lower bound. Plan cost: upper bound. Stop when they meet. Exact and finite.</li>
+      <li>Subproblems decompose by scenario and can run in parallel.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">Why does a Benders cut stay valid for every \(x\), not just the \(x_t\) where it was generated?</div>
+      <div class="opts">
+        <button class="opt">Because \(x_t\) is optimal.</button>
+        <button class="opt" data-correct>Because the dual solution \(q^{v_t}\) is feasible for the dual at every \(x\), so \((w - Ux)^\top q^{v_t} \le Q(x)\) everywhere.</button>
+        <button class="opt">Because the cut is tangent to \(Q\).</button>
+      </div>
+      <div class="feedback">The dual feasible set \(\{p : V^\top p \le f\}\) does not depend on \(x\). Any dual feasible point gives a lower bound on the dual maximum, which equals \(Q(x)\).</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="two-stage.html"><small>Previous · 15a</small>Here and now, wait and see</a>
+    <a class="next" href="value.html"><small>Next · 15c</small>The value of adapting</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 15, slides 13 to 22</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>
