@@ -4,6 +4,10 @@
 
   /* ---------- search index: one entry per page ---------- */
   var PAGES = [
+    { t: "Class 13: Robust optimization modeling", d: "Data uncertainty, robust formulations, uncertainty sets, price of robustness", u: "/class13/", k: "robust optimization uncertainty set adversary" },
+    { t: "13a: Why uncertainty matters", d: "PILOT4, sources of uncertainty, limits of probability models", u: "/class13/why-uncertainty.html", k: "pilot4 netlib constraint violation data uncertainty measurement estimation implementation error probability distribution" },
+    { t: "13b: Robust formulations", d: "Adversary, uncertainty set, robust LP, row-wise uncertainty", u: "/class13/robust-formulations.html", k: "adversary worst case robust counterpart epigraph uncertain cost right-hand side row-wise feasible region" },
+    { t: "13c: Building uncertainty sets", d: "Capacity expansion, box set, central limit theorem set, price of robustness, nurse scheduling", u: "/class13/uncertainty-sets.html", k: "box element-wise clt central limit theorem gamma price of robustness capacity expansion knapsack nurse scheduling hyperparameter" },
     { t: "Class 18: Gradient descent", d: "Unconstrained minimization, optimality conditions, gradient descent, convergence, step sizes", u: "/class18/", k: "gradient descent unconstrained minimization overview" },
     { t: "18a: Optimality conditions", d: "Stationary points, Hessian, positive definite, local vs global minimum, convexity", u: "/class18/optimality-conditions.html", k: "stationary point hessian positive definite semidefinite indefinite saddle necessary sufficient convex global local first-order second-order taylor ridge regression" },
     { t: "18b: The gradient descent algorithm", d: "Descent directions, the update rule, rates of convergence", u: "/class18/gradient-descent.html", k: "descent direction update rule step size algorithm rate of convergence linear sublinear superlinear quadratic order" },

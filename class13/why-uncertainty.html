@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13a Why uncertainty matters · Opti</title>
+<meta name="description" content="How tiny errors in data can make an optimal solution infeasible, and why probability models alone do not fix it.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 13: Robust optimization modeling</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 13 · Part a</p>
+  <h1>Why uncertainty <em>matters</em></h1>
+  <p class="lede">Linear optimization treats every number in the model as exact. Real numbers are estimates. This part shows how badly that can go, and what a better method should deliver.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#examples">When the world disagrees with the model</a></li>
+      <li><a href="#pilot4">A constraint from PILOT4</a></li>
+      <li><a href="#sources">Where uncertainty comes from</a></li>
+      <li><a href="#probability">Why not just use probability?</a></li>
+      <li><a href="#goals">What robust optimization promises</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="examples">
+    <h2>When the world disagrees with the model</h2>
+    <p>The lecture opens with two engineering stories. The Tacoma Narrows Bridge was designed to withstand 120 mph winds, yet it collapsed in a 42 mph wind because of a resonance effect its designers had not modelled. A schedule for ships passing through the Panama Canal can squeeze in six extra large ships per day, but only if no vessel breaks down and no rope snaps.</p>
+    <p>The common thread: a design that is optimal for the expected conditions can fail badly under conditions that are only slightly different. Optimization makes this worse, because an optimal solution typically sits right on the edge of the feasible region. Any small error in the data can push it over the edge.</p>
+  </section>
+
+  <section class="block" id="pilot4">
+    <h2>A constraint from PILOT4</h2>
+    <p>NETLIB is a standard library of real linear optimization problems. One constraint of the PILOT4 problem has the form \(a^\top x \ge b\) with about thirty coefficients, such as \(-15.79081\), \(-8.598819\), \(717.562256\), and a right-hand side \(b = 23.387405\).</p>
+    <p>Some coefficients, like 1, are clearly exact. Others, like 8.598819, are estimates and probably not accurate to the last digit. Two questions follow. Will the nominal solution \(x^*\) stay optimal if the data are slightly off? Will it even stay feasible?</p>
+
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Worst-case view">
+        <p>Suppose every uncertain coefficient may be off by 0.1%: \(|a_i - \bar a_i| \le 0.001\,|\bar a_i|\). How badly can the nominal solution violate the constraint?</p>
+        <div class="math-block">\[ \min_{a}\, (a^\top x^* - b) = -128.8 \approx -5.5\,b. \]</div>
+        <p>A 0.1% error in the data can produce a constraint violation of 550%.</p>
+      </div>
+      <div class="tab-panel" data-tab="Average view">
+        <p>Now let each coefficient be \(a_i = \bar a_i + \varepsilon_i |\bar a_i|\) with \(\varepsilon_i\) uniform on \([-0.001, 0.001]\), and simulate 1,000 samples. Measure the relative violation \(V = \max\big[(b - a^\top x^*)/|b|,\ 0\big]\).</p>
+        <ul>
+          <li>The constraint is violated in 50% of the samples.</li>
+          <li>The average violation is 125%: \(\mathbb{E}(V) = 1.25\).</li>
+          <li>The worst sampled violation is 450%.</li>
+        </ul>
+      </div>
+      <div class="tab-panel" data-tab="Across NETLIB">
+        <p>With only 0.01% uncertainty in the parameters, 19 of the 90 NETLIB problems have constraints violated by more than 5%, and 13 of the 90 have constraints violated by more than 50%.</p>
+        <p>So this is not a quirk of one problem. Nominal solutions of real models are fragile as a rule.</p>
+      </div>
+    </div>
+    <div class="callout red">
+      <span class="label">The core problem</span>
+      <p>Linear optimization pushes the solution to a vertex, where constraints hold with equality. Any error in the data then decides, by chance, whether the solution is feasible. Being optimal and being fragile go together.</p>
+    </div>
+  </section>
+
+  <section class="block" id="sources">
+    <h2>Where uncertainty comes from</h2>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Source</th><th>Example</th></tr></thead>
+      <tbody>
+        <tr><td>Inexact data</td><td>Missing entries, incomplete records</td></tr>
+        <tr><td>Measurement error</td><td>Inaccurate sensors, rounding, noise added for privacy</td></tr>
+        <tr><td>Estimation error</td><td>Demand forecasts, cost and price predictions</td></tr>
+        <tr><td>Implementation error</td><td>A length, weight or voltage cannot be set to exactly the optimal value</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="block" id="probability">
+    <h2>Why not just use probability?</h2>
+    <p>The obvious approach is to model each uncertain number as a random variable and optimize, for example, the probability of staying feasible. The lecture lists four reasons this is hard in practice:</p>
+    <ul>
+      <li><strong>Data.</strong> Probability distributions are rarely known. You have a mean and a standard deviation at best.</li>
+      <li><strong>Analysis.</strong> The probability that a constraint is violated is hard to write down as a function of \(x\).</li>
+      <li><strong>Computation.</strong> Simulation only approximates these probabilities, and can be expensive.</li>
+      <li><strong>Scale.</strong> All of this gets worse quickly as the number of variables and constraints grows.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="goals">
+    <h2>What robust optimization promises</h2>
+    <p>Robust optimization sets itself two goals:</p>
+    <ol>
+      <li>Solutions that stay <strong>feasible and perform well</strong> even when the parameter estimates are wrong.</li>
+      <li>A method that stays <strong>tractable</strong> in high dimensions, so it works on problems as large as the nominal ones.</li>
+    </ol>
+    <p>The next part shows how: replace "the data equal their estimates" by "the data lie somewhere in a set", and require the solution to work for every point in that set.</p>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">Why are optimal solutions of linear programs especially sensitive to errors in the constraint data?</div>
+      <div class="opts">
+        <button class="opt">Because solvers round numbers.</button>
+        <button class="opt" data-correct>Because the optimum is typically at a vertex where several constraints are tight, so a small change in the data can make them violated.</button>
+        <button class="opt">Because the objective function is linear.</button>
+      </div>
+      <div class="feedback">At a vertex, constraints hold with equality. There is no slack left to absorb an error in the coefficients.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="./"><small>Back to</small>Class 13 overview</a>
+    <a class="next" href="robust-formulations.html"><small>Next · 13b</small>Robust formulations</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 13, slides 2 to 8</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

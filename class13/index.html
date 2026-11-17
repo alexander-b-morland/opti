@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class 13 · Robust optimization modeling · Opti</title>
+<meta name="description" content="Robust optimization modeling: why data uncertainty breaks optimal solutions, robust formulations, uncertainty sets and the price of robustness.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="/">&larr; All classes</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 13 · Optimization under uncertainty</p>
+  <h1>Robust optimization <em>modeling</em></h1>
+  <p class="lede">Optimal solutions are fragile when the data are estimates. Robust optimization asks for the best decision that survives every value of the data in a set you choose.</p>
+</header>
+
+<nav class="chapter-toc" aria-label="On this page"><div class="container">
+  <ol>
+    <li><a href="#big-picture"><span>01</span>Big picture</a></li>
+    <li><a href="#parts"><span>02</span>Parts</a></li>
+    <li><a href="#flashcards"><span>03</span>Flashcards</a></li>
+    <li><a href="#quiz"><span>04</span>Test yourself</a></li>
+  </ol>
+</div></nav>
+
+<main class="container">
+<section class="block" id="big-picture">
+  <span class="section-badge">Overview</span>
+  <h2>The big picture</h2>
+  <p class="lead">Classes 1 to 12 assumed every number in the model was known. From class 13 on, the course asks what to do when it is not.</p>
+  <div class="tabs">
+    <div class="tab-panel" data-tab="Analogy">
+      <p class="analogy">You are packing for a trip and the forecast says 15 degrees. Packing exactly for 15 degrees is optimal if the forecast is right, and miserable if it is off by five. A sensible traveller packs for any temperature between 10 and 20, and accepts carrying a slightly heavier bag.</p>
+      <p>The range 10 to 20 is the <strong>uncertainty set</strong>. The heavier bag is the <strong>price of robustness</strong>. Robust optimization makes both precise.</p>
+    </div>
+    <div class="tab-panel" data-tab="In one formula">
+      <div class="math-block">\[ \min_x\ c^\top x \quad \text{s.t.}\quad a_i^\top x \le b_i \quad \forall\, a_i \in \mathcal{U}_i,\ i = 1, \dots, m. \]</div>
+      <p>Every constraint must hold for every possible value of its coefficients in the set \(\mathcal{U}_i\). Class 13 is about choosing the sets. Class 14 is about solving the problem.</p>
+    </div>
+    <div class="tab-panel" data-tab="Why it matters">
+      <p>In real linear programs, coefficient errors of 0.1% can produce constraint violations of 500%. Probability models would need distributions nobody has. Robust optimization only needs a set, keeps the problem tractable, and often costs very little optimality.</p>
+    </div>
+  </div>
+
+  <h3>The story of the class in three steps</h3>
+  <div class="flow three">
+    <div class="step"><b>13a · Problem</b><span>Tiny data errors break optimal solutions.</span></div>
+    <div class="step"><b>13b · Model</b><span>An adversary picks the data from a set. Stay feasible for all of it.</span></div>
+    <div class="step"><b>13c · Sets</b><span>Box or CLT set, and the price of robustness.</span></div>
+  </div>
+
+  <div class="callout">
+    <span class="label">Four takeaways from the lecture</span>
+    <ol style="margin:0">
+      <li>Robust optimization is a tractable way to find decisions that are immune to data uncertainty, estimation errors and implementation errors.</li>
+      <li>It protects against adversarial perturbations of the parameters within an uncertainty set.</li>
+      <li>The set is built from the conclusions of probability theory, not its axioms, so it needs no distributional assumptions.</li>
+      <li>The price of robustness is often small: give up a little optimality, stay feasible for a wide range of outcomes.</li>
+    </ol>
+  </div>
+
+  <h3>For your note sheet</h3>
+  <div class="sheet">
+    <div><b>Robust LP</b>\(\min c^\top x\) s.t. \(a_i^\top x \le b_i\ \forall a_i \in \mathcal{U}_i\).<br>Uncertain \(c\): epigraph \(t \ge c^\top x\). Uncertain \(b\): move it into \(A\).</div>
+    <div><b>Box set</b>\(|a_i - \bar a_i| \le \Gamma\sigma_i\) for each \(i\).<br>With \(x \ge 0\): \(\sum_i (\bar a_i + \Gamma\sigma_i)x_i \le b\).</div>
+    <div><b>CLT set</b>\(\big|\sum_i (a_i - \bar a_i)/\sigma_i\big| \le \Gamma\sqrt{n}\).<br>\(\Gamma = 2\): about 95%. \(\Gamma = 3\): about 99.7%.</div>
+    <div><b>Trade-off</b>Bigger set: more feasible in reality, worse objective. Robust value is never better than nominal (if \(\bar a \in \mathcal{U}\)).</div>
+  </div>
+</section>
+
+<section class="block" id="parts">
+  <span class="section-badge">Parts</span>
+  <h2>Explore the class</h2>
+  <div class="subpage-list">
+    <a class="subpage-card" href="why-uncertainty.html"><span class="sp-num">13a</span><div><div class="sp-title">Why uncertainty matters</div><div class="sp-desc">The PILOT4 example, sources of uncertainty, and the limits of probability models</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="robust-formulations.html"><span class="sp-num">13b</span><div><div class="sp-title">Robust formulations</div><div class="sp-desc">The adversary, the uncertainty set, the robust LP and the shrinking feasible region</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="uncertainty-sets.html"><span class="sp-num">13c</span><div><div class="sp-title">Building uncertainty sets</div><div class="sp-desc">Capacity expansion, box versus CLT sets, the price of robustness, nurse scheduling</div></div><span class="sp-arrow">&rarr;</span></a>
+  </div>
+</section>
+
+<section class="block flashcards-section" id="flashcards">
+  <span class="section-badge">Quick review</span>
+  <h2>Flashcards</h2>
+  <p>Click a card to flip it. Arrow keys move between cards once a card has focus.</p>
+  <div class="flashcards">
+<script type="application/json">
+[
+ {"q": "What is an uncertainty set?", "a": "The set \\(\\mathcal{U}\\) of possible values of the uncertain parameters that the robust formulation must protect against. The modeller chooses it."},
+ {"q": "Write the robust counterpart idea for one constraint.", "a": "\\(a^\\top x \\le b\\) for all \\(a \\in \\mathcal{U}\\), equivalently \\(\\max_{a \\in \\mathcal{U}} a^\\top x \\le b\\)."},
+ {"q": "How do you handle an uncertain cost vector \\(c\\)?", "a": "Epigraph trick: minimize \\(t\\) subject to \\(c^\\top x - t \\le 0\\). The uncertainty now sits in a constraint."},
+ {"q": "How do you handle an uncertain right-hand side \\(b\\)?", "a": "Write \\(Ax - b \\le 0\\) and treat \\(-b\\) as the column of an extra variable fixed to 1. Then it is part of the matrix."},
+ {"q": "What is row-wise uncertainty?", "a": "Each constraint row \\(a_i\\) has its own set \\(\\mathcal{U}_i\\), independent of the others. Each constraint can then be protected separately."},
+ {"q": "What did the PILOT4 example show?", "a": "A 0.1% error in the coefficients can make the nominal solution violate a constraint by up to 550%. In simulation, the constraint was violated half the time."},
+ {"q": "Why are probability models hard to use for optimization under uncertainty?", "a": "Distributions are rarely known, violation probabilities are hard to derive, simulation is approximate and expensive, and none of it scales well."},
+ {"q": "Define the box (element-wise) uncertainty set.", "a": "\\(\\{a : -\\Gamma \\le (a_i - \\bar a_i)/\\sigma_i \\le \\Gamma\\ \\forall i\\}\\). Each parameter may deviate by up to \\(\\Gamma\\) standard deviations."},
+ {"q": "Why is the box set often too conservative?", "a": "It lets every parameter take its worst value at the same time, which is very unlikely when the errors are independent."},
+ {"q": "Define the CLT uncertainty set.", "a": "\\(\\{a : -\\Gamma\\sqrt{n} \\le \\sum_i (a_i - \\bar a_i)/\\sigma_i \\le \\Gamma\\sqrt{n}\\}\\). It bounds the total normalized deviation, since independent errors tend to cancel."},
+ {"q": "What does \"conclusions, not axioms\" mean?", "a": "The set is built from a result of probability theory (the CLT) instead of a full probability model. No distribution is assumed."},
+ {"q": "What is the price of robustness?", "a": "The loss in objective value from protecting against uncertainty. It is often small, and it shrinks as the number of uncertain parameters grows."},
+ {"q": "How do you choose \\(\\Gamma\\)?", "a": "Like a hyperparameter: solve for several values, evaluate on validation or simulated data, and pick the preferred trade-off."},
+ {"q": "Nominal versus robust value for a max problem with \\(\\bar c \\in \\mathcal{U}\\)?", "a": "\\(Z_R = \\max_x \\min_{c \\in \\mathcal{U}} c^\\top x \\le Z_N\\), since \\(\\min_{c \\in \\mathcal{U}} c^\\top x \\le \\bar c^\\top x\\) for every \\(x\\)."}
+]
+</script>
+  </div>
+</section>
+
+<section class="block" id="quiz">
+  <span class="section-badge">Exam practice</span>
+  <h2>Test yourself</h2>
+  <p>Multiple choice in the style of the midterm. Say your one-line justification before you click.</p>
+
+  <div class="quiz">
+    <div class="q-label">Question 1 · Robust value</div>
+    <div class="q-text">A maximization LP has uncertain costs \(c \in \mathcal{U}\), where \(\mathcal{U}\) contains the nominal \(\bar c\). Compare the nominal value \(Z_N\) with the robust value \(Z_R = \max_{Ax \le b} \min_{c \in \mathcal{U}} c^\top x\).</div>
+    <div class="opts">
+      <button class="opt" data-correct>\(Z_R \le Z_N\)</button>
+      <button class="opt">\(Z_R \ge Z_N\)</button>
+      <button class="opt">They cannot be compared.</button>
+    </div>
+    <div class="feedback">For every \(x\), \(\min_{c \in \mathcal{U}} c^\top x \le \bar c^\top x\) because \(\bar c\) is in the set. Taking the maximum over \(x\) on both sides gives \(Z_R \le Z_N\).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 2 · Comparing sets</div>
+    <div class="q-text">A minimization problem with uncertain \(c\) is solved with \(\mathcal{U}_1 = \{c : \|c - \bar c\|_1 \le \rho_1\}\) and with \(\mathcal{U}_2 = \{c : \|c - \bar c\|_\infty \le \rho_2\}\). Which is true?</div>
+    <div class="opts">
+      <button class="opt">\(Z_N \le Z_1 \le Z_2\)</button>
+      <button class="opt">\(Z_N \le Z_2 \le Z_1\)</button>
+      <button class="opt" data-correct>\(Z_N \le Z_1\) and \(Z_N \le Z_2\), but \(Z_1\) and \(Z_2\) cannot be compared in general.</button>
+    </div>
+    <div class="feedback">Both sets contain \(\bar c\), so both robust problems are at least as constrained as the nominal one. Which set is larger depends on \(\rho_1\) and \(\rho_2\), so neither ordering holds in general.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 3 · Monotonicity</div>
+    <div class="q-text">In the capacity expansion example, what happens to the NPV of the robust solution as \(\Gamma\) increases?</div>
+    <div class="opts">
+      <button class="opt">It can go up or down.</button>
+      <button class="opt" data-correct>It never increases.</button>
+      <button class="opt">It stays constant once the solution is feasible.</button>
+    </div>
+    <div class="feedback">A larger \(\Gamma\) gives a larger uncertainty set, which removes feasible plans. The best NPV over a smaller set of plans cannot be higher.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 4 · Box worst case</div>
+    <div class="q-text">Constraint \(a_1x_1 + a_2x_2 \le 10\) with \(x \ge 0\), \(\bar a = (2, 3)\), and box set \(|a_i - \bar a_i| \le 1\). The robust constraint is:</div>
+    <div class="opts">
+      <button class="opt">\(2x_1 + 3x_2 \le 10\)</button>
+      <button class="opt" data-correct>\(3x_1 + 4x_2 \le 10\)</button>
+      <button class="opt">\(x_1 + 2x_2 \le 10\)</button>
+    </div>
+    <div class="feedback">With \(x \ge 0\), the adversary raises every coefficient to its maximum, \(a = (3, 4)\).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 5 · Philosophy</div>
+    <div class="q-text">Which statement best describes how robust optimization treats uncertainty?</div>
+    <div class="opts">
+      <button class="opt">It maximizes expected performance under a known probability distribution.</button>
+      <button class="opt" data-correct>It requires feasibility for every parameter value in a set, which the modeller builds from limited information such as means and standard deviations.</button>
+      <button class="opt">It ignores uncertainty and adds slack to each constraint by hand.</button>
+    </div>
+    <div class="feedback">Robust optimization is a worst-case approach over a set. No distribution is assumed, though results like the CLT can guide how the set is shaped.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 6 · CLT set</div>
+    <div class="q-text">Why does the CLT set usually give a less conservative solution than the box set with the same \(\Gamma\)?</div>
+    <div class="opts">
+      <button class="opt">Because it is always a subset of the box set.</button>
+      <button class="opt" data-correct>Because it bounds the sum of the normalized deviations, so the adversary cannot push every parameter to its extreme at once.</button>
+      <button class="opt">Because it allows only negative deviations.</button>
+    </div>
+    <div class="feedback">The CLT set limits the total deviation, reflecting that independent errors tend to cancel. It is not a subset of the box in general, since one parameter alone may deviate by more than \(\Gamma\sigma_i\), but it removes the "everything goes wrong together" scenarios that drive the box solution.</div>
+  </div>
+
+  <p class="quiz-score" aria-live="polite"></p>
+</section>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 13</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

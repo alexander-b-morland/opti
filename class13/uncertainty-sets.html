@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13c Building uncertainty sets · Opti</title>
+<meta name="description" content="Box and Central Limit Theorem uncertainty sets, the capacity expansion example, the price of robustness and the nurse scheduling case.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/robust.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 13: Robust optimization modeling</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 13 · Part c</p>
+  <h1>Building uncertainty <em>sets</em></h1>
+  <p class="lede">The uncertainty set is the main modeling choice in robust optimization. Too small and the solution is fragile. Too large and it is needlessly conservative. A worked example shows the trade-off.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#example">Example: capacity expansion</a></li>
+      <li><a href="#box">First attempt: element-wise deviations</a></li>
+      <li><a href="#clt">Second attempt: the Central Limit Theorem</a></li>
+      <li><a href="#results">Results and the price of robustness</a></li>
+      <li><a href="#nurses">Case study: nurse scheduling</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="example">
+    <h2>Example: capacity expansion</h2>
+    <p>A company can build factories in four new markets with a $500M budget. Each factory earns a long-term net present value (NPV). Construction costs are uncertain, but past projects give their mean and standard deviation.</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Market</th><th>1</th><th>2</th><th>3</th><th>4</th></tr></thead>
+      <tbody>
+        <tr><td>Expected cost \(\bar a_i\) ($M)</td><td>120</td><td>100</td><td>180</td><td>140</td></tr>
+        <tr><td>Standard deviation \(\sigma_i\) ($M)</td><td>12</td><td>10</td><td>18</td><td>14</td></tr>
+        <tr><td>NPV ($B)</td><td>50</td><td>40</td><td>60</td><td>30</td></tr>
+      </tbody>
+    </table></div>
+    <p>With \(x_i\) the number of factories in market \(i\), the deterministic model is an integer knapsack problem:</p>
+    <div class="math-block">\[ \max\ 50x_1 + 40x_2 + 60x_3 + 30x_4 \quad \text{s.t.}\quad 120x_1 + 100x_2 + 180x_3 + 140x_4 \le 500,\quad x \in \mathbb{Z}_+^4. \]</div>
+    <p>The nominal solution is \(x = (4, 0, 0, 0)\): four factories in market 1, costing $480M with $20M to spare. If costs come in slightly above expectation, the budget is blown. How should we protect against cost overruns?</p>
+  </section>
+
+  <section class="block" id="box">
+    <h2>First attempt: element-wise deviations</h2>
+    <p>Let each cost deviate from its mean by at most \(\Gamma\) standard deviations, for example \(\Gamma = 1, 2, 3\):</p>
+    <div class="math-block">\[ \mathcal{U}_1 = \Big\{ a \in \mathbb{R}^4 : -\Gamma \le \frac{a_i - \bar a_i}{\sigma_i} \le \Gamma,\ i = 1, \dots, 4 \Big\}. \]</div>
+    <p>This is a <strong>box</strong>. The robust constraint \(a^\top x \le 500\) for all \(a \in \mathcal{U}_1\) is easy to read: with \(x \ge 0\), the worst case puts every cost at its maximum, so the constraint becomes \(\sum_i (\bar a_i + \Gamma\sigma_i)x_i \le 500\).</p>
+    <div class="callout gold">
+      <span class="label">Fair criticism</span>
+      <p>The box assumes all costs can hit their worst value at the same time. With independent projects that is very unlikely. The box is safe, but it may be too pessimistic.</p>
+    </div>
+  </section>
+
+  <section class="block" id="clt">
+    <h2>Second attempt: the Central Limit Theorem</h2>
+    <div class="box">
+      <span class="label">Reminder: Central Limit Theorem</span>
+      <p>If \(X_1, \dots, X_n\) are i.i.d. with mean \(\mu\) and standard deviation \(\sigma\), then as \(n \to \infty\),</p>
+      <div class="math-block">\[ \frac{X_1 + \dots + X_n - n\mu}{\sigma\sqrt{n}} \sim \mathcal{N}(0, 1). \]</div>
+    </div>
+    <p>Intuitively, a sum of independent random variables stays close to its mean: deviations tend to cancel. The lecture builds this into the set by limiting the <em>total</em> normalised deviation:</p>
+    <div class="math-block">\[ \mathcal{U}_2 = \Big\{ a \in \mathbb{R}^n : -\Gamma\sqrt{n} \le \sum_{i=1}^n \frac{a_i - \bar a_i}{\sigma_i} \le \Gamma\sqrt{n} \Big\}. \]</div>
+    <ul>
+      <li>For \(\Gamma = 2\), \(\mathbb{P}[a \in \mathcal{U}_2] \approx 0.95\) for large \(n\). For \(\Gamma = 3\), about 0.997.</li>
+      <li>\(\Gamma\) still controls how much protection you buy.</li>
+    </ul>
+    <div class="callout">
+      <span class="label">The philosophy</span>
+      <p>Robust optimization does not start from the axioms of probability (distributions, densities). It starts from one of its conclusions, the Central Limit Theorem, and turns it into a set. No distributional assumption is needed beyond a mean and a spread.</p>
+    </div>
+  </section>
+
+  <section class="block" id="results">
+    <h2>Results and the price of robustness</h2>
+    <div class="widget" data-widget="capacity">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Buying protection with \(\Gamma\)</h4><p>Robust capacity expansion with the box set \(\mathcal{U}_1\), solved exactly for each \(\Gamma\). Move the slider and watch the plan, the NPV and the chance of staying within budget.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>The lecture reports these solutions for both sets:</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Set</th><th>\(\Gamma\)</th><th>NPV</th><th>\(x\)</th><th>Unused capital</th></tr></thead>
+      <tbody>
+        <tr><td>Nominal</td><td>0</td><td>200</td><td>(4, 0, 0, 0)</td><td>20</td></tr>
+        <tr><td>Box \(\mathcal{U}_1\)</td><td>0.5</td><td>190</td><td>(3, 1, 0, 0)</td><td>40</td></tr>
+        <tr><td>Box \(\mathcal{U}_1\)</td><td>1</td><td>180</td><td>(2, 2, 0, 0)</td><td>60</td></tr>
+        <tr><td>Box \(\mathcal{U}_1\)</td><td>1.5</td><td>170</td><td>(1, 3, 0, 0)</td><td>80</td></tr>
+        <tr><td>Box \(\mathcal{U}_1\)</td><td>2 and 2.5</td><td>160</td><td>(0, 4, 0, 0)</td><td>100</td></tr>
+        <tr><td>Box \(\mathcal{U}_1\)</td><td>3</td><td>150</td><td>(3, 0, 0, 0)</td><td>140</td></tr>
+        <tr><td>CLT \(\mathcal{U}_2\)</td><td>0.5 and 1</td><td>190</td><td>(3, 1, 0, 0)</td><td>40</td></tr>
+        <tr><td>CLT \(\mathcal{U}_2\)</td><td>1.5 to 2.5</td><td>180</td><td>(2, 2, 0, 0)</td><td>60</td></tr>
+        <tr><td>CLT \(\mathcal{U}_2\)</td><td>3</td><td>160</td><td>(2, 0, 1, 0)</td><td>80</td></tr>
+      </tbody>
+    </table></div>
+    <h3>What the numbers say</h3>
+    <ul>
+      <li><strong>More \(\Gamma\), more safety, less value.</strong> As \(\Gamma\) grows, the plan keeps more capital unused, is more likely to stay within budget, and earns a lower NPV.</li>
+      <li><strong>The price of robustness can be small.</strong> For small \(\Gamma\) the robust plan keeps about 90% of the nominal NPV while raising the chance of staying within budget a lot.</li>
+      <li><strong>The set matters.</strong> The CLT set limits the adversary more, so its solutions are less conservative: less unused capital, a slightly lower but similar probability of staying within budget, and a higher NPV.</li>
+      <li><strong>More uncertain parameters, cheaper robustness.</strong> The CLT set performs even better as \(n\) grows, because the approximation improves. With 10 variables instead of 4, the price of robustness shrinks.</li>
+    </ul>
+    <div class="callout">
+      <span class="label">How to choose \(\Gamma\)?</span>
+      <p>Treat it like a hyperparameter in machine learning. Solve for several values, evaluate each solution on held-out or simulated data, and pick the trade-off you want.</p>
+    </div>
+  </section>
+
+  <section class="block" id="nurses">
+    <h2>Case study: nurse scheduling</h2>
+    <p>An emergency department must decide how many nurses of each experience tier \(q\) work in each position \(j\) (clinical leader, triage, a pod of patients), in each shift \(i\), on each day \(d\). The decision variables are \(z_{qjid}\), the number of such nurses. Understaffing hurts patients, overstaffing wastes nurses, and nurses have preferences. Patient demand varies by hour and by day, and is hard to forecast.</p>
+    <p>The core model minimizes the number of nurse-shifts \(\sum z_{qjid}\) subject to scheduling rules \(z \in \mathcal{Z}\): minimum and maximum staffing, eligibility, week-to-week consistency, available nurses and working-hour limits.</p>
+    <h3>The uncertainty set</h3>
+    <p>Historical data give target staffing levels \(\bar h_{jsw}\) (nurses needed in position \(j\) at hour \(s\) of week \(w\)). The set bounds the forecast error at three levels:</p>
+    <ul>
+      <li>for each hour and position, at most \(\Gamma^1_{js}\),</li>
+      <li>summed over a week for each position, at most \(\Gamma^2_j\),</li>
+      <li>summed over a week and all positions, at most \(\Gamma^3\).</li>
+    </ul>
+    <p>This is a polyhedral set, a richer version of the CLT idea: individual errors can be large, but they cannot all be large together.</p>
+    <h3>The robust model and the result</h3>
+    <p>The objective combines three goals with weights \(\lambda_1, \lambda_2\): few nurse-shifts, little insufficiency relative to the target nurse-to-patient ratio (npr, protected for all demand in \(\mathcal{U}\)), and little change from the current schedule.</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Schedule</th><th>Nurse-shifts per day</th><th>Cost reduction</th><th>Insufficiency</th><th>Insufficiency reduction</th></tr></thead>
+      <tbody>
+        <tr><td>Current</td><td>56</td><td>n/a</td><td>0.17</td><td>n/a</td></tr>
+        <tr><td>Perfect-information oracle</td><td>49.81</td><td>11.05%</td><td>0.02</td><td>86.96%</td></tr>
+        <tr><td>Deterministic</td><td>50.42</td><td>9.95%</td><td>0.21</td><td>\(-22.55\)%</td></tr>
+        <tr><td>Robust</td><td>51.33</td><td>8.33%</td><td>0.12</td><td>27.70%</td></tr>
+      </tbody>
+    </table></div>
+    <p>The deterministic schedule is cheap but leaves more insufficiency than today's schedule. The robust schedule cuts insufficiency by 28% at a cost only about 2% above the deterministic one. Varying \(\lambda_1\) traces out the cost versus insufficiency trade-off, and the chosen schedule improves on the current one in both.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>The box set protects each parameter separately and is often too conservative.</li>
+      <li>The CLT set bounds the total deviation, because independent errors tend to cancel. It gives less conservative solutions.</li>
+      <li>\(\Gamma\) trades value for protection. Choose it like a hyperparameter.</li>
+      <li>The price of robustness is often small, and shrinks as the number of uncertain parameters grows.</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>Expect to write an uncertainty set from a verbal description ("each yield is at least its lower bound, and the total yield is at least \(\Gamma_j\)"), and to explain in words why one set gives a more conservative solution than another.</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">With the box set and \(\Gamma = 1\), which plan is robust feasible for the capacity expansion problem?</div>
+      <div class="opts">
+        <button class="opt">\((3, 1, 0, 0)\)</button>
+        <button class="opt" data-correct>\((2, 2, 0, 0)\)</button>
+        <button class="opt">\((4, 0, 0, 0)\)</button>
+      </div>
+      <div class="feedback">Worst-case costs are \(132, 110, 198, 154\). Then \((2, 2)\) costs \(264 + 220 = 484 \le 500\), while \((3, 1)\) costs \(396 + 110 = 506\) and \((4, 0)\) costs \(528\).</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="robust-formulations.html"><small>Previous · 13b</small>Robust formulations</a>
+    <a class="next" href="./#flashcards"><small>Finish with</small>Flashcards and practice questions</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 13, slides 13 to 33</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

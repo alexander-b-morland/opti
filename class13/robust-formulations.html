@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>13b Robust formulations · Opti</title>
+<meta name="description" content="The adversary, the uncertainty set and the robust counterpart of a linear program.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/robust.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 13: Robust optimization modeling</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 13 · Part b</p>
+  <h1>Robust <em>formulations</em></h1>
+  <p class="lede">Instead of trusting one estimate of the data, protect against every value in a set. The cost is a smaller feasible region. The reward is a solution that cannot be broken by any data in that set.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#adversary">Playing against an adversary</a></li>
+      <li><a href="#robust-lp">The robust linear program</a></li>
+      <li><a href="#wlog">Uncertainty in the matrix only</a></li>
+      <li><a href="#rowwise">Row-wise uncertainty</a></li>
+      <li><a href="#picture">The picture</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="adversary">
+    <h2>Playing against an adversary</h2>
+    <p>Robust optimization takes a worst-case view of uncertainty. Think of it as a game in three moves:</p>
+    <div class="flow">
+      <div class="step"><b>1 · You</b><span>Choose a decision \(x\).</span></div>
+      <div class="step"><b>2 · Adversary</b><span>Picks the data, anywhere in the set \(\mathcal{U}\), to hurt you most.</span></div>
+      <div class="step"><b>3 · Outcome</b><span>Your \(x\) must still be feasible.</span></div>
+      <div class="step"><b>Goal</b><span>The best \(x\) that survives every move of the adversary.</span></div>
+    </div>
+    <div class="box">
+      <span class="label">Definition</span>
+      <p>The <strong>uncertainty set</strong> \(\mathcal{U}\) is the set of possible values of the uncertain parameters that the robust formulation must protect against. The modeller chooses it.</p>
+    </div>
+    <p>The adversary is powerful but not all-powerful. It may only choose parameter values inside \(\mathcal{U}\). Everything therefore hinges on two questions:</p>
+    <ul>
+      <li><strong>Modeling:</strong> how should \(\mathcal{U}\) be built to represent the uncertainty? (Part c.)</li>
+      <li><strong>Tractability:</strong> how do we actually solve the resulting problem? (Class 14.)</li>
+    </ul>
+  </section>
+
+  <section class="block" id="robust-lp">
+    <h2>The robust linear program</h2>
+    <div class="two-col">
+      <div class="box"><span class="label">Nominal problem</span>
+        <div class="math-block">\[ \begin{aligned} \min\ & c^\top x \\ \text{s.t. } & Ax \le b \\ & x \ge 0 \end{aligned} \]</div></div>
+      <div class="box theorem"><span class="label">Robust problem</span>
+        <div class="math-block">\[ \begin{aligned} \min\ & c^\top x \\ \text{s.t. } & Ax \le b \quad \forall A \in \mathcal{U} \\ & x \ge 0 \end{aligned} \]</div></div>
+    </div>
+    <p>The robust problem seeks the best solution that stays feasible for <em>every</em> combination of the uncertain parameters in \(\mathcal{U}\). Written out, that is one constraint for each possible \(A\), so infinitely many constraints whenever \(\mathcal{U}\) is an infinite set. Class 14 shows how to turn this into a finite, solvable problem.</p>
+  </section>
+
+  <section class="block" id="wlog">
+    <h2>Uncertainty in the matrix only</h2>
+    <p>What if the costs \(c\) and the right-hand sides \(b\) are uncertain too? Two small tricks move all the uncertainty into the constraint matrix.</p>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Uncertain costs">
+        <p>Introduce a new variable \(t\) for the objective value (an epigraph variable):</p>
+        <div class="math-block">\[ \min_{x,\, t}\ t \quad \text{s.t.}\quad c^\top x - t \le 0,\quad Ax \le b,\quad x \ge 0. \]</div>
+        <p>Now the objective \(t\) is certain, and \(c\) appears only in a constraint.</p>
+      </div>
+      <div class="tab-panel" data-tab="Uncertain right-hand sides">
+        <p>Move \(b\) to the left: \(Ax - b \le 0\). Treat \(-b\) as the coefficient column of an extra variable that is fixed to 1. Then \(b\) is just part of the matrix.</p>
+      </div>
+    </div>
+    <p>So, without loss of generality, we can study robust optimization with uncertainty in \(A\) only.</p>
+  </section>
+
+  <section class="block" id="rowwise">
+    <h2>Row-wise uncertainty</h2>
+    <p>In practice the uncertainty in different constraints is usually unrelated, so we assume a separate set \(\mathcal{U}_i\) for each row \(a_i\) of \(A\):</p>
+    <div class="math-block">\[ \min\ c^\top x \quad \text{s.t.}\quad a_i^\top x \le b_i \quad \forall a_i \in \mathcal{U}_i,\ i = 1, \dots, m, \qquad x \ge 0. \]</div>
+    <p>Each constraint gets its own adversary, which makes the problem decompose nicely row by row.</p>
+  </section>
+
+  <section class="block" id="picture">
+    <h2>The picture</h2>
+    <div class="widget" data-widget="robust-region" data-sets="box">
+      <div class="widget-head"><span class="label">Interactive</span><h4>The robust feasible region shrinks</h4><p>Maximize \(3x_1 + 4x_2\) subject to \(a_1x_1 + a_2x_2 \le 12\), \(x_1 \le 4\), \(x \ge 0\). The nominal coefficients are \((2, 3)\), but each may deviate by up to \(\rho\) times \((0.6, 0.9)\). Grow \(\rho\) and watch the region and the optimum move.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>Three things to notice:</p>
+    <ul>
+      <li>At \(\rho = 0\) the robust problem is the nominal one.</li>
+      <li>As \(\rho\) grows, the robust feasible region shrinks and the robust optimum gets worse. This loss is the <strong>price of robustness</strong>.</li>
+      <li>The nominal optimum lies on the nominal line. For any \(\rho &gt; 0\) the worst case pushes its left-hand side above 12, so it becomes infeasible.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Robust optimization: an adversary chooses the data inside an uncertainty set \(\mathcal{U}\) chosen by the modeller, and the decision must stay feasible for every choice.</li>
+      <li>Uncertain costs and right-hand sides can be moved into the matrix, so we focus on uncertain \(A\).</li>
+      <li>With row-wise sets, each constraint \(a_i^\top x \le b_i\) must hold for all \(a_i \in \mathcal{U}_i\).</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>A common true or false: for a maximization problem with uncertain costs \(c \in \mathcal{U}\), and \(\mathcal{U}\) containing the nominal \(\bar c\), the robust value \(Z_R = \max_x \min_{c \in \mathcal{U}} c^\top x\) is at most the nominal value \(Z_N\). True: the inner minimum is at most \(\bar c^\top x\) for every \(x\). In epigraph form, the robust problem has more constraints than the nominal one.</p>
+      <p>Last year's version compared two different sets, \(\|c - \bar c\|_1 \le \rho_1\) and \(\|c - \bar c\|_\infty \le \rho_2\). Both robust values are worse than nominal, but they cannot be ranked against each other without knowing \(\rho_1\) and \(\rho_2\).</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">You enlarge the uncertainty set from \(\mathcal{U}\) to \(\mathcal{U}' \supseteq \mathcal{U}\) in a minimization problem. The robust optimal value:</div>
+      <div class="opts">
+        <button class="opt">Decreases or stays the same.</button>
+        <button class="opt" data-correct>Increases or stays the same.</button>
+        <button class="opt">Can move in either direction.</button>
+      </div>
+      <div class="feedback">A larger set means more constraints, so a smaller feasible region. A minimum over a smaller set is at least as large.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="why-uncertainty.html"><small>Previous · 13a</small>Why uncertainty matters</a>
+    <a class="next" href="uncertainty-sets.html"><small>Next · 13c</small>Building uncertainty sets</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 13, slides 9 to 12</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>
