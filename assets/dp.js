@@ -54,7 +54,7 @@
           if (C[j][kk] !== prev) { chosen.push(j + 1); kk -= ITEMS[j].w; }
         }
         vd.className = "verdict good stepper-text";
-        vd.textContent = "Done. The answer is C" + sub(n) + "(" + CAPK + ") = " + C[n - 1][CAPK] + ". Tracing back where the value changed gives items {" + chosen.reverse().join(", ") + "}. " + n * (CAPK + 1) + " cells instead of 2ⁿ = " + Math.pow(2, n) + " subsets here, and the gap explodes for larger n.";
+        vd.textContent = "Done. The answer is C" + sub(n) + "(" + CAPK + ") = " + C[n - 1][CAPK] + ". Tracing back where the value changed gives items {" + chosen.reverse().join(", ") + "}. " + "The table has n(K + 1) = " + n * (CAPK + 1) + " cells. For four items that is more than the 2⁴ = 16 subsets, but with 40 items and capacity 1,000 it is 40,040 cells against about 10¹² subsets.";
       } else if (lastI == null) {
         vd.className = "verdict stepper-text"; vd.textContent = "Each cell Cᵢ(κ) is the best value using only the first i items with capacity κ. Each one needs only two cells from the row above.";
       } else { vd.className = "verdict stepper-text"; vd.textContent = explain(lastI, lastK); }
