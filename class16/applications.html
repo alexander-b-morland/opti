@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16c Inventory and recruiting · Opti</title>
+<meta name="description" content="Two dynamic programming applications: optimal inventory control with an order-up-to policy, and when to hire in a sequence of interviews.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/dp.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 16: Dynamic programming</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 16 · Part c</p>
+  <h1>Inventory and <em>recruiting</em></h1>
+  <p class="lede">Two classic applications. In both, the optimal policy turns out to have a simple shape, and the shape itself is the managerial insight.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#inventory">Inventory control: the model</a></li>
+      <li><a href="#policy">The order-up-to policy</a></li>
+      <li><a href="#recruiting">Recruiting: the model</a></li>
+      <li><a href="#thresholds">Falling thresholds</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="inventory">
+    <h2>Inventory control: the model</h2>
+    <p>Each month you decide how many units to order. Units sell at price \(p\). Ordering costs a fixed \(F\) plus \(c\) per unit. Holding stock costs \(h\) per unit at the start of each month. Demand is uncertain, and unmet demand is lost (no backlog).</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Ingredient</th><th>Inventory model</th></tr></thead>
+      <tbody>
+        <tr><td>State</td><td>\(x_k\): inventory at the start of month \(k\)</td></tr>
+        <tr><td>Decision</td><td>\(u_k\): amount ordered at the start of month \(k\)</td></tr>
+        <tr><td>Uncertainty</td><td>\(d_k\): demand during month \(k\)</td></tr>
+        <tr><td>Transition</td><td>\(x_{k+1} = \max(x_k + u_k - d_k,\ 0)\)</td></tr>
+        <tr><td>Units sold</td><td>\(x_k + u_k - x_{k+1} = \min(d_k,\ x_k + u_k)\)</td></tr>
+      </tbody>
+    </table></div>
+    <p>The reward (to be maximized) in month \(k\) is</p>
+    <div class="math-block">\[ g_k(x_k, u_k) = \begin{cases} p \min(d_k, x_k + u_k) - h x_k & \text{if } u_k = 0, \\ p \min(d_k, x_k + u_k) - h x_k - F - c\,u_k & \text{if } u_k &gt; 0, \end{cases} \qquad g_N(x_N) = -h x_N. \]</div>
+    <p>The fixed cost \(F\) makes the problem non-linear and non-convex: ordering one unit costs almost as much as ordering many. Dynamic programming does not mind.</p>
+  </section>
+
+  <section class="block" id="policy">
+    <h2>The order-up-to policy</h2>
+    <div class="widget" data-widget="inventory">
+      <div class="widget-head"><span class="label">Interactive</span><h4>The optimal order for each inventory level</h4><p>Each bar is the optimal order \(u_k = \mu_k(x_k)\) in the chosen month, computed by backward induction. Look at the shape, then raise and lower the fixed cost.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>Two patterns appear in every month, and also in the lecture's own table of optimal orders:</p>
+    <ul>
+      <li>With low inventory, the order falls one-for-one as inventory rises (a slope of \(-1\)). You always order up to the same level \(S_k\).</li>
+      <li>With high inventory, you do not order at all.</li>
+    </ul>
+    <div class="box theorem">
+      <span class="label">Order-up-to policy \((s_k, S_k)\)</span>
+      <div class="math-block">\[ \mu_k(x_k) = \begin{cases} S_k - x_k & \text{if } x_k &lt; s_k, \\ 0 & \text{if } x_k \ge s_k. \end{cases} \]</div>
+    </div>
+    <p>The gap between \(s_k\) and \(S_k\) comes from the fixed cost. With \(F = 0\) you would top up every month. With a large \(F\), you wait until stock is low and then order a lot at once. Near the end of the horizon the levels drop, because leftover stock only costs holding fees.</p>
+    <p>In the lecture's example, a run looks like this: start with 0 units in month 1 and order 29. Demand is 14, so month 2 starts with 15: no order. Demand is 12, so month 3 starts with 3: order 25. And so on.</p>
+  </section>
+
+  <section class="block" id="recruiting">
+    <h2>Recruiting: the model</h2>
+    <p>You interview \(n\) candidates one at a time. Each scores between 0 and 100. After each interview you either hire that candidate (and stop) or reject them forever. When should you make an offer?</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Ingredient</th><th>Recruiting model</th></tr></thead>
+      <tbody>
+        <tr><td>State</td><td>\(x_k\): score of candidate \(k\), or \(T\) once someone has been hired</td></tr>
+        <tr><td>Decision</td><td>\(u_k = 1\) to hire candidate \(k\), \(u_k = 0\) to continue</td></tr>
+        <tr><td>Uncertainty</td><td>\(s_k\): the score of candidate \(k\)</td></tr>
+        <tr><td>Transition</td><td>\(x_{k+1} = T\) if \(x_k = T\) or \(u_k = 1\). Otherwise \(x_{k+1} = s_{k+1}\).</td></tr>
+      </tbody>
+    </table></div>
+    <div class="box theorem">
+      <span class="label">Bellman's equation</span>
+      <div class="math-block">\[ J_k(x_k) = \max\big\{ x_k,\ \mathbb{E}[J_{k+1}(s_{k+1})] \big\}, \qquad J_{n+1}(\cdot) = 0,\qquad J_k(T) = 0. \]</div>
+      <p>Hire now and get the score \(x_k\), or continue and get the expected value of the rest of the process.</p>
+    </div>
+  </section>
+
+  <section class="block" id="thresholds">
+    <h2>Falling thresholds</h2>
+    <p>The equation says: hire candidate \(k\) exactly when their score beats \(\mathbb{E}[J_{k+1}(s_{k+1})]\), the value of continuing. That value is a number, so the policy is a <strong>threshold</strong> for each interview slot.</p>
+    <div class="widget" data-widget="recruiting">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Minimum score needed to be hired</h4><p>Scores are uniform on 0 to 100. The bars show the hiring threshold for each interview slot under the optimal policy.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <div class="two-col">
+      <div class="box"><span class="label">For recruiters</span><p>Become less demanding over time. Early on, many candidates remain, so continuing is valuable. The last candidate is hired whatever their score.</p></div>
+      <div class="box"><span class="label">For applicants</span><p>If you are strong, interview early, before the firm has settled. If you are weaker, interview late, when the bar has dropped.</p></div>
+    </div>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Inventory with a fixed ordering cost: the optimal policy is order-up-to, \((s_k, S_k)\).</li>
+      <li>Recruiting: hire when the score beats the expected value of continuing. The threshold falls over time.</li>
+      <li>In both, solving the DP numerically reveals a simple policy structure that managers can use directly.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">The policy in a month is \(s_k = 7\), \(S_k = 29\). You start the month with 4 units. How much do you order?</div>
+      <div class="opts">
+        <button class="opt">0</button>
+        <button class="opt">7</button>
+        <button class="opt" data-correct>25</button>
+      </div>
+      <div class="feedback">4 is below the reorder point 7, so order up to 29: \(29 - 4 = 25\).</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="bellman.html"><small>Previous · 16b</small>States, decisions and Bellman's equation</a>
+    <a class="next" href="./#flashcards"><small>Finish with</small>Flashcards and practice questions</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 16, slides 15 to 21</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>16b States, decisions and Bellman's equation · Opti</title>
+<meta name="description" content="Modeling sequential decisions under uncertainty with states, decisions, transitions and costs, and solving them by backward induction.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 16: Dynamic programming</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 16 · Part b</p>
+  <h1>States, decisions <em>and Bellman</em></h1>
+  <p class="lede">The knapsack recursion generalizes to any problem where decisions are made over time, each decision changes the state, and chance may intervene. The tool is Bellman's equation, solved backwards.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#ingredients">The five ingredients</a></li>
+      <li><a href="#examples">Examples</a></li>
+      <li><a href="#bellman">Bellman's equation</a></li>
+      <li><a href="#backward">Backward induction, step by step</a></li>
+      <li><a href="#curse">The curse of dimensionality</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="ingredients">
+    <h2>The five ingredients</h2>
+    <p>Time is split into periods \(k = 0, 1, \dots, N\). In each period you observe where you are, decide, and then chance moves you to a new situation. A dynamic program is defined by five things:</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Ingredient</th><th>Notation</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>State</td><td>\(x_k\)</td><td>Everything about the past that matters for the future: costs, constraints and transitions. The crucial modeling step.</td></tr>
+        <tr><td>Decision</td><td>\(u_k \in U_k(x_k)\)</td><td>What you choose in period \(k\), from a set that may depend on the state.</td></tr>
+        <tr><td>Transition</td><td>\(x_{k+1} = f_k(x_k, u_k)\)</td><td>How the state evolves. Usually stochastic: it depends on random events too.</td></tr>
+        <tr><td>Per-period cost</td><td>\(g_k(x_k, u_k)\)</td><td>The (possibly random) cost incurred in period \(k\).</td></tr>
+        <tr><td>Terminal cost</td><td>\(g_N(x_N)\)</td><td>The cost of the state you end in.</td></tr>
+      </tbody>
+    </table></div>
+    <p>The goal is to minimize the total expected cost,</p>
+    <div class="math-block">\[ \min\ \mathbb{E}\Big[ g_N(x_N) + \sum_{k=0}^{N-1} g_k(x_k, u_k) \Big]. \]</div>
+    <p>The answer is not a single plan but a <strong>policy</strong> \(\mu_k(x_k)\): a rule that says what to do in each period for each possible state. Because the future is random, you cannot fix all decisions in advance. You react to the state you land in.</p>
+    <div class="callout">
+      <span class="label">Choosing the state</span>
+      <p>The state must summarize everything needed going forward and nothing more. It can have physical parts (inventory, capacity, case counts) and information parts (current beliefs about demand or about a disease). Too little and the recursion is wrong. Too much and it is unsolvable.</p>
+    </div>
+  </section>
+
+  <section class="block" id="examples">
+    <h2>Examples</h2>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Pandemic">
+        <p><strong>State:</strong> cases, hospitalizations, deaths, knowledge about the disease. <strong>Decisions:</strong> lockdowns, distancing, testing, vaccination. <strong>Transition:</strong> how the epidemic evolves and how beliefs are updated. <strong>Cost:</strong> economic, logistical and health impact.</p>
+      </div>
+      <div class="tab-panel" data-tab="Power capacity">
+        <p><strong>State:</strong> current capacity, renewable mix, demand, prices, beliefs about future technology. <strong>Decisions:</strong> which plants to build and retire. <strong>Transition:</strong> future capacity and operating conditions. <strong>Cost:</strong> capital, operations, emissions.</p>
+      </div>
+      <div class="tab-panel" data-tab="Climate">
+        <p><strong>State:</strong> temperatures, sea levels, beliefs about the dynamics. <strong>Decisions:</strong> abatement policies. <strong>Transition:</strong> physical change and learning. <strong>Cost:</strong> regulation versus climate damage.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="bellman">
+    <h2>Bellman's equation</h2>
+    <p>Define the <strong>cost-to-go</strong> \(J_k(x_k)\): the expected optimal cost from period \(k\) onward, starting in state \(x_k\). It splits into what you pay now and what you will pay later:</p>
+    <div class="box theorem">
+      <span class="label">Bellman's equation</span>
+      <div class="math-block">\[ J_N(x_N) = g_N(x_N), \qquad J_k(x_k) = \min_{u_k \in U_k(x_k)} \mathbb{E}\Big[ \underbrace{g_k(x_k, u_k)}_{\text{immediate cost}} + \underbrace{J_{k+1}\big(f_k(x_k, u_k)\big)}_{\text{future cost}} \Big]. \]</div>
+      <p>The optimal policy is the minimizer: \(\mu_k^*(x_k) \in \arg\min_{u_k} \mathbb{E}[g_k(x_k, u_k) + J_{k+1}(x_{k+1})]\). The value of the whole problem is \(J_0(x_0)\).</p>
+    </div>
+    <div class="callout gold">
+      <span class="label">Think forward, reason backward</span>
+      <p>The decisions happen forward in time, but the computation runs backward. You can only judge a decision today if you already know what every possible tomorrow is worth. So start at the end, where \(J_N\) is known, and move back one period at a time.</p>
+    </div>
+  </section>
+
+  <section class="block" id="backward">
+    <h2>Backward induction, step by step</h2>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="1 · Evaluate a decision">
+        <p>Suppose you know \(J_{k+1}\) in every state. Stand in a state \(x_k^{(i)}\) and consider decision \(u_k^A\). Its expected total is</p>
+        <div class="math-block">\[ \mathbb{E}\big[g_k(x_k^{(i)}, u_k^A)\big] + \mathbb{E}\big[J_{k+1}(f_k(x_k^{(i)}, u_k^A))\big], \]</div>
+        <p>where the second expectation averages \(J_{k+1}\) over the states that \(u_k^A\) can lead to.</p>
+      </div>
+      <div class="tab-panel" data-tab="2 · Pick the best">
+        <p>Repeat for every possible decision \(u_k^A, u_k^B, u_k^C, \dots\). The smallest total is \(J_k(x_k^{(i)})\), and the decision that achieves it is \(\mu_k^*(x_k^{(i)})\).</p>
+      </div>
+      <div class="tab-panel" data-tab="3 · Move back">
+        <p>Repeat for every state \(x_k^{(i)}, x_k^{(ii)}, \dots\). Now \(J_k\) is known everywhere, so you can do the same for period \(k - 1\):</p>
+        <div class="math-block">\[ J_{k-1}(x_{k-1}) = \min_{u_{k-1}} \mathbb{E}\big[g_{k-1}(x_{k-1}, u_{k-1}) + J_k(f_{k-1}(x_{k-1}, u_{k-1}))\big]. \]</div>
+        <p>Continue until period 0.</p>
+      </div>
+    </div>
+    <p>The knapsack recursion is a deterministic special case: the state is (items considered, capacity left), the decision is take or skip, and there is no randomness.</p>
+  </section>
+
+  <section class="block" id="curse">
+    <h2>The curse of dimensionality</h2>
+    <p>Backward induction visits every state, every decision and every random outcome in every period. The work grows quickly with:</p>
+    <ul>
+      <li>the number of stages (long horizons, fine time steps),</li>
+      <li>the number of states (many or finely discretized states of the world),</li>
+      <li>the number of decisions,</li>
+      <li>the number of scenarios for the uncertainty.</li>
+    </ul>
+    <p>A state with 10 components, each with 100 possible values, already has \(10^{20}\) states. That is why large problems need <strong>approximate dynamic programming</strong> and <strong>reinforcement learning</strong>, which approximate \(J_k\) instead of tabulating it.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Model: states, decisions, transitions, per-period costs and a terminal cost.</li>
+      <li>The solution is a policy \(\mu_k(x_k)\), a decision for every period and state.</li>
+      <li>Bellman: \(J_k(x_k) = \min_{u_k} \mathbb{E}[g_k + J_{k+1}(x_{k+1})]\), with \(J_N = g_N\).</li>
+      <li>Solve backward. Dynamic programming handles non-linearities and uncertainty, but suffers from the curse of dimensionality.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">Why does a stochastic dynamic program produce a policy instead of a fixed sequence of decisions?</div>
+      <div class="opts">
+        <button class="opt">Because the state space is finite.</button>
+        <button class="opt" data-correct>Because the future states are random, so the best decision in a period depends on which state you actually reach.</button>
+        <button class="opt">Because Bellman's equation is solved backward.</button>
+      </div>
+      <div class="feedback">A fixed sequence would have to be chosen before seeing the random outcomes. A policy reacts to them, which can only do better.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="knapsack.html"><small>Previous · 16a</small>The knapsack recursion</a>
+    <a class="next" href="applications.html"><small>Next · 16c</small>Inventory and recruiting</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 16, slides 6 to 14 · BT 11.3</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

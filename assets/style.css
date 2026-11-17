@@ -368,3 +368,12 @@ details.more > div { padding: 0 20px 10px; }
 @media (max-width: 760px) { .sheet { grid-template-columns: 1fr; } .tab-bar button { padding: 10px 12px; } }
 
 .controls select { font-family: var(--sans); font-size: 13px; padding: 7px 10px; border: 1px solid var(--rule); border-radius: 8px; background: var(--card); color: var(--ink); }
+
+/* dynamic programming table */
+table.dp-grid { border-collapse: collapse; font-family: var(--mono); font-size: 14px; margin: 14px 0 4px; }
+table.dp-grid th, table.dp-grid td { border: 1px solid var(--rule); padding: 7px 10px; text-align: center; min-width: 46px; }
+table.dp-grid thead th, table.dp-grid tbody th { background: var(--paper-2); color: var(--ink-2); font-weight: 500; font-size: 12px; }
+table.dp-grid td { background: var(--card); transition: background .2s; }
+table.dp-grid td.cur { background: var(--gold-soft); outline: 2px solid var(--gold); outline-offset: -2px; font-weight: 600; }
+table.dp-grid td.dep { background: var(--accent-soft); }
+table.dp-grid td.dep2 { background: var(--accent-soft); outline: 2px dashed var(--accent); outline-offset: -2px; }

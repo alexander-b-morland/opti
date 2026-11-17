@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class 16 · Dynamic programming · Opti</title>
+<meta name="description" content="Dynamic programming: the knapsack recursion, states and Bellman's equation, backward induction, inventory control and recruiting.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="/">&larr; All classes</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 16 · Optimization under uncertainty</p>
+  <h1>Dynamic <em>programming</em></h1>
+  <p class="lede">When decisions unfold over time and chance intervenes between them, solve backward: first the last decision, then the one before it, storing what each situation is worth.</p>
+</header>
+
+<nav class="chapter-toc" aria-label="On this page"><div class="container">
+  <ol>
+    <li><a href="#big-picture"><span>01</span>Big picture</a></li>
+    <li><a href="#parts"><span>02</span>Parts</a></li>
+    <li><a href="#flashcards"><span>03</span>Flashcards</a></li>
+    <li><a href="#quiz"><span>04</span>Test yourself</a></li>
+  </ol>
+</div></nav>
+
+<main class="container">
+<section class="block" id="big-picture">
+  <span class="section-badge">Overview</span>
+  <h2>The big picture</h2>
+  <p class="lead">Class 15 had two stages. Many problems have dozens: decide, observe, decide again. Dynamic programming handles any number of stages, any non-linearity and any uncertainty, as long as the state stays small.</p>
+  <div class="tabs">
+    <div class="tab-panel" data-tab="Analogy">
+      <p class="analogy">Planning a road trip backward. If you know how long it takes to reach the destination from every town on the last day, you can figure out the best town to stop in on the second-to-last day. From there, the day before. By the time you reach today, you know the best first move, and a rule for every situation you could end up in.</p>
+    </div>
+    <div class="tab-panel" data-tab="In one formula">
+      <div class="math-block">\[ J_k(x_k) = \min_{u_k \in U_k(x_k)} \mathbb{E}\big[ g_k(x_k, u_k) + J_{k+1}(f_k(x_k, u_k)) \big], \qquad J_N = g_N. \]</div>
+      <p>The value of being in state \(x_k\) is the best decision's immediate cost plus the expected value of where it takes you.</p>
+    </div>
+    <div class="tab-panel" data-tab="Why it matters">
+      <p>Dynamic programming is the foundation of reinforcement learning. It gives exact answers for small problems, simple and interpretable policies (order-up-to levels, hiring thresholds), and a language for thinking about any sequential decision.</p>
+    </div>
+  </div>
+
+  <h3>The story of the class in three steps</h3>
+  <div class="flow three">
+    <div class="step"><b>16a · Idea</b><span>Knapsack: big problem from small ones, filled in a table.</span></div>
+    <div class="step"><b>16b · Framework</b><span>States, decisions, transitions, costs. Bellman's equation, backward.</span></div>
+    <div class="step"><b>16c · Practice</b><span>Inventory (order-up-to) and recruiting (falling thresholds).</span></div>
+  </div>
+
+  <div class="callout">
+    <span class="label">Takeaways from the lecture</span>
+    <ol style="margin:0">
+      <li>Dynamic programming handles sequential decisions with non-linearities and uncertainty.</li>
+      <li>The model: states, actions, transition functions, per-period costs and terminal costs.</li>
+      <li>Bellman's equation is a recursion that is solved by backward induction.</li>
+      <li>The curse of dimensionality motivates approximate dynamic programming and reinforcement learning.</li>
+    </ol>
+  </div>
+
+  <h3>For your note sheet</h3>
+  <div class="sheet">
+    <div><b>Knapsack</b>\(C_{i+1}(\kappa) = \max\{C_i(\kappa),\ c_{i+1} + C_i(\kappa - w_{i+1})\}\)<br>\(C_i(\kappa) = -\infty\) for \(\kappa &lt; 0\). \(O(nK)\).</div>
+    <div><b>Bellman</b>\(J_N = g_N\)<br>\(J_k(x) = \min_u \mathbb{E}[g_k(x, u) + J_{k+1}(f_k(x, u))]\)<br>Policy \(\mu_k(x)\) = the argmin.</div>
+    <div><b>Inventory</b>\(x_{k+1} = \max(x_k + u_k - d_k, 0)\)<br>Order-up-to: \(u = S_k - x\) if \(x &lt; s_k\), else 0.</div>
+    <div><b>Recruiting</b>\(J_k(x) = \max\{x,\ \mathbb{E}[J_{k+1}(s_{k+1})]\}\)<br>Hire iff score \(\ge\) value of continuing. Bar falls over time.</div>
+  </div>
+</section>
+
+<section class="block" id="parts">
+  <span class="section-badge">Parts</span>
+  <h2>Explore the class</h2>
+  <div class="subpage-list">
+    <a class="subpage-card" href="knapsack.html"><span class="sp-num">16a</span><div><div class="sp-title">The knapsack recursion</div><div class="sp-desc">Subproblems, skip or take, filling the table, O(nK)</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="bellman.html"><span class="sp-num">16b</span><div><div class="sp-title">States, decisions and Bellman's equation</div><div class="sp-desc">The five ingredients, policies, backward induction, the curse of dimensionality</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="applications.html"><span class="sp-num">16c</span><div><div class="sp-title">Inventory and recruiting</div><div class="sp-desc">The order-up-to policy and hiring thresholds that fall over time</div></div><span class="sp-arrow">&rarr;</span></a>
+  </div>
+</section>
+
+<section class="block flashcards-section" id="flashcards">
+  <span class="section-badge">Quick review</span>
+  <h2>Flashcards</h2>
+  <p>Click a card to flip it. Arrow keys move between cards once a card has focus.</p>
+  <div class="flashcards">
+<script type="application/json">
+[
+ {"q": "Define \\(C_i(\\kappa)\\) for the knapsack DP.", "a": "The maximum value obtainable using only the first \\(i\\) items with capacity \\(\\kappa\\). The answer to the full problem is \\(C_n(K)\\)."},
+ {"q": "Write the knapsack recursion.", "a": "\\(C_{i+1}(\\kappa) = \\max\\{C_i(\\kappa),\\ c_{i+1} + C_i(\\kappa - w_{i+1})\\}\\): skip item \\(i+1\\) or take it."},
+ {"q": "Initial conditions of the knapsack DP?", "a": "\\(C_1(\\kappa) = 0\\) if \\(0 \\le \\kappa &lt; w_1\\), \\(c_1\\) if \\(\\kappa \\ge w_1\\). And \\(C_i(\\kappa) = -\\infty\\) for \\(\\kappa &lt; 0\\)."},
+ {"q": "Complexity of the knapsack DP?", "a": "\\(O(nK)\\) with integer weights and capacity: one constant-time computation per state. Versus \\(2^n\\) for enumeration. (Pseudo-polynomial: polynomial in the value of \\(K\\).)"},
+ {"q": "What are the five ingredients of a DP model?", "a": "State \\(x_k\\), decision \\(u_k \\in U_k(x_k)\\), transition \\(x_{k+1} = f_k(x_k, u_k)\\), per-period cost \\(g_k(x_k, u_k)\\), terminal cost \\(g_N(x_N)\\)."},
+ {"q": "What must the state contain?", "a": "Everything about the past needed to determine future costs, constraints and transitions. It can include physical quantities and information or beliefs."},
+ {"q": "What is a policy?", "a": "A rule \\(\\mu_k(x_k)\\) giving the decision in each period for each possible state. Under uncertainty, the solution of a DP is a policy, not a fixed plan."},
+ {"q": "Define the cost-to-go function.", "a": "\\(J_k(x_k)\\): the expected optimal cost from period \\(k\\) to the end, starting in state \\(x_k\\)."},
+ {"q": "State Bellman's equation.", "a": "\\(J_N(x_N) = g_N(x_N)\\), \\(J_k(x_k) = \\min_{u_k} \\mathbb{E}[g_k(x_k, u_k) + J_{k+1}(f_k(x_k, u_k))]\\)."},
+ {"q": "Why is DP solved backward?", "a": "To judge a decision today you need the value of every state tomorrow. Only \\(J_N\\) is known directly, so you start at the end and move back."},
+ {"q": "What is the curse of dimensionality?", "a": "The work grows explosively with the number of stages, states, decisions and scenarios. Approximate DP and reinforcement learning address it."},
+ {"q": "Inventory DP: state, decision, transition?", "a": "State: stock at the start of the month. Decision: order quantity. Transition: \\(x_{k+1} = \\max(x_k + u_k - d_k, 0)\\) (no backlog)."},
+ {"q": "Describe the order-up-to policy.", "a": "If inventory \\(x_k &lt; s_k\\), order \\(S_k - x_k\\). Otherwise order nothing. The fixed ordering cost creates the gap between \\(s_k\\) and \\(S_k\\)."},
+ {"q": "Recruiting: Bellman equation and policy?", "a": "\\(J_k(x_k) = \\max\\{x_k, \\mathbb{E}[J_{k+1}(s_{k+1})]\\}\\). Hire if the score is at least the expected value of continuing. The threshold falls over time."}
+]
+</script>
+  </div>
+</section>
+
+<section class="block" id="quiz">
+  <span class="section-badge">Exam practice</span>
+  <h2>Test yourself</h2>
+  <p>Multiple choice in the style of the midterm. Say your one-line justification before you click.</p>
+
+  <div class="quiz">
+    <div class="q-label">Question 1 · Recursion</div>
+    <div class="q-text">Items: \((c, w) = (6, 2), (10, 3)\). Capacity \(K = 4\). What is \(C_2(4)\)?</div>
+    <div class="opts">
+      <button class="opt">6</button>
+      <button class="opt" data-correct>10</button>
+      <button class="opt">16</button>
+    </div>
+    <div class="feedback">\(C_1(4) = 6\) and \(C_1(1) = 0\). So \(C_2(4) = \max\{6,\ 10 + C_1(1)\} = 10\). Both items together weigh 5, more than 4.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 2 · Complexity</div>
+    <div class="q-text">The knapsack DP runs in \(O(nK)\). Why is it not considered a polynomial-time algorithm for the knapsack problem?</div>
+    <div class="opts">
+      <button class="opt">Because it may return a non-optimal solution.</button>
+      <button class="opt" data-correct>Because \(K\) can be exponential in the number of bits used to write it, so the table can be huge.</button>
+      <button class="opt">Because it needs the LP relaxation.</button>
+    </div>
+    <div class="feedback">It is pseudo-polynomial: polynomial in the numeric value of \(K\), not in the input size.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 3 · Modeling</div>
+    <div class="q-text">In the inventory model, why is the inventory level a valid state?</div>
+    <div class="opts">
+      <button class="opt">Because demand is deterministic.</button>
+      <button class="opt" data-correct>Because, together with this month's decision and demand, it determines this month's reward and next month's inventory. Nothing else about the past matters.</button>
+      <button class="opt">Because the policy is order-up-to.</button>
+    </div>
+    <div class="feedback">A state must summarize everything from the past that affects the future. Past orders and demands matter only through the current stock.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 4 · Bellman</div>
+    <div class="q-text">In the recruiting problem with \(n\) candidates, what is the hiring threshold for the last candidate?</div>
+    <div class="opts">
+      <button class="opt" data-correct>0: hire whoever is left.</button>
+      <button class="opt">50, the average score.</button>
+      <button class="opt">The same as for the first candidate.</button>
+    </div>
+    <div class="feedback">\(J_{n+1} = 0\), so the value of continuing after the last candidate is 0. Any score beats it.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 5 · Policy shape</div>
+    <div class="q-text">If the fixed ordering cost \(F\) is set to 0, what happens to the order-up-to policy?</div>
+    <div class="opts">
+      <button class="opt">You never order.</button>
+      <button class="opt" data-correct>\(s_k\) rises to \(S_k\): you top up to the target level whenever stock is below it.</button>
+      <button class="opt">You order a constant amount every month.</button>
+    </div>
+    <div class="feedback">With no fixed cost there is no reason to delay a small order, so the reorder point coincides with the target (a base-stock policy).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 6 · Dimensionality</div>
+    <div class="q-text">A DP has 20 periods, a state with 3 components of 50 values each, and 10 decisions. Roughly how many state-decision pairs per period must be evaluated?</div>
+    <div class="opts">
+      <button class="opt">\(1{,}500\)</button>
+      <button class="opt" data-correct>\(1{,}250{,}000\)</button>
+      <button class="opt">\(2{,}500{,}000{,}000\)</button>
+    </div>
+    <div class="feedback">\(50^3 = 125{,}000\) states times 10 decisions. Add a few more state components and it becomes impossible: the curse of dimensionality.</div>
+  </div>
+
+  <p class="quiz-score" aria-live="polite"></p>
+</section>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 16 · BT 11.3</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>
