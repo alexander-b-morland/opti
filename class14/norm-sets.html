@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14a Norm uncertainty sets and dual norms · Opti</title>
+<meta name="description" content="Solving the adversary's problem in closed form: box, ellipsoidal and budget uncertainty sets, the dual norm and the robust counterpart as a safety buffer.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/robust.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 14: Robust optimization algorithms</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 14 · Part a</p>
+  <h1>Norm sets and <em>dual norms</em></h1>
+  <p class="lede">The robust constraint hides a maximization: the adversary's best response. For sets shaped like norm balls, that maximization has a closed-form answer, and the robust constraint becomes the nominal one plus a safety buffer.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#problem">The problem with infinitely many constraints</a></li>
+      <li><a href="#direct">The direct method</a></li>
+      <li><a href="#norm-sets">Norm uncertainty sets</a></li>
+      <li><a href="#ellipsoid">The ellipsoidal set, step by step</a></li>
+      <li><a href="#dual-norm">The dual norm and the general rule</a></li>
+      <li><a href="#picture">Seeing it</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="problem">
+    <h2>The problem with infinitely many constraints</h2>
+    <p>Class 13 wrote the robust problem as</p>
+    <div class="math-block">\[ \max\ c^\top x \quad \text{s.t.}\quad a_i^\top x \le b_i \quad \forall a_i \in \mathcal{U}_i,\ i = 1, \dots, m, \qquad x \ge 0. \]</div>
+    <p>That is one constraint for every \(a_i\) in the set: infinitely many. An equivalent way to say "for all \(a_i\)" is "for the worst \(a_i\)":</p>
+    <div class="math-block">\[ \max_{a_i \in \mathcal{U}_i} a_i^\top x \le b_i, \qquad i = 1, \dots, m. \]</div>
+    <p>Now there are finitely many constraints, but each contains an optimization problem. A solver cannot take that directly. Class 14 gives two ways out: <strong>reformulate</strong> the inner problem (parts a and b), or <strong>generate constraints</strong> one at a time (part c).</p>
+  </section>
+
+  <section class="block" id="direct">
+    <h2>The direct method</h2>
+    <p>Suppose we can solve the inner problem by hand and get a formula \(g_i(x) = \max_{a_i \in \mathcal{U}_i} a_i^\top x\). Then the robust problem is simply</p>
+    <div class="math-block">\[ \max\ c^\top x \quad \text{s.t.}\quad g_i(x) \le b_i,\ i = 1, \dots, m, \qquad x \ge 0. \]</div>
+    <p>For well-structured sets based on norms, \(g_i\) has a clean closed form. That is what makes them so popular.</p>
+  </section>
+
+  <section class="block" id="norm-sets">
+    <h2>Norm uncertainty sets</h2>
+    <p>Both sets from class 13 describe small deviations around a nominal value \(\bar a_i\): either each component separately (the box) or in total (the CLT set). The general template is:</p>
+    <div class="box">
+      <span class="label">Definition (norm uncertainty set)</span>
+      <p>Let \(\Delta_i \in \mathbb{R}^{k_i \times n}\) and \(\rho \ge 0\). Then</p>
+      <div class="math-block">\[ \mathcal{U}_i = \big\{ a_i \in \mathbb{R}^n : a_i = \bar a_i + \Delta_i^\top u_i,\ \|u_i\| \le \rho \big\}. \]</div>
+    </div>
+    <ul>
+      <li>\(u_i\) is the <strong>perturbation</strong>. Its norm, at most \(\rho\), controls how much uncertainty there is.</li>
+      <li>\(\Delta_i\) <strong>scales</strong> the perturbation, so some coefficients can be more uncertain than others (for example \(\Delta_i = \mathrm{diag}(\sigma_1, \dots, \sigma_n)\)).</li>
+      <li>The choice of norm sets the <strong>shape</strong>.</li>
+    </ul>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Norm on \(u\)</th><th>Shape of the set</th><th>Name</th></tr></thead>
+      <tbody>
+        <tr><td>\(\|u\|_\infty = \max_j |u_j|\)</td><td>Box</td><td>Box uncertainty</td></tr>
+        <tr><td>\(\|u\|_2 = \sqrt{\sum_j u_j^2}\)</td><td>Ellipsoid</td><td>Ellipsoidal uncertainty</td></tr>
+        <tr><td>\(\|u\|_1 = \sum_j |u_j|\)</td><td>Diamond (cross-polytope)</td><td>Budget uncertainty</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="block" id="ellipsoid">
+    <h2>The ellipsoidal set, step by step</h2>
+    <p>Take \(\|u_i\|_2 \le \rho\). Split the inner problem into a nominal part and a perturbation part:</p>
+    <div class="math-block">\[ Z_i = \max_{a_i \in \mathcal{U}_i} a_i^\top x = \bar a_i^\top x + \max_{\|u_i\|_2 \le \rho} u_i^\top (\Delta_i x). \]</div>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Claim">
+        <div class="math-block">\[ \max_{\|u_i\|_2 \le \rho} u_i^\top (\Delta_i x) = \rho\,\|\Delta_i x\|_2. \]</div>
+        <p>In words: the adversary points its perturbation in the same direction as \(\Delta_i x\), with full length \(\rho\).</p>
+      </div>
+      <div class="tab-panel" data-tab="Candidate">
+        <p>Try \(u_i^* = \rho\, \dfrac{\Delta_i x}{\|\Delta_i x\|_2}\).</p>
+        <p>It is feasible: \(\|u_i^*\|_2 = \rho\).</p>
+        <p>Its value is \((u_i^*)^\top (\Delta_i x) = \rho\, \dfrac{\|\Delta_i x\|_2^2}{\|\Delta_i x\|_2} = \rho\, \|\Delta_i x\|_2\).</p>
+      </div>
+      <div class="tab-panel" data-tab="Optimality">
+        <p>By the Cauchy-Schwarz inequality, every feasible \(u_i\) satisfies</p>
+        <div class="math-block">\[ u_i^\top (\Delta_i x) \le \|u_i\|_2\, \|\Delta_i x\|_2 \le \rho\, \|\Delta_i x\|_2. \]</div>
+        <p>So no feasible \(u_i\) does better than \(u_i^*\), which proves the claim.</p>
+      </div>
+    </div>
+    <div class="box theorem">
+      <span class="label">Proposition (ellipsoidal uncertainty)</span>
+      <p>The robust counterpart is</p>
+      <div class="math-block">\[ \max\ c^\top x \quad \text{s.t.}\quad \bar a_i^\top x + \rho\,\|\Delta_i x\|_2 \le b_i,\ i = 1, \dots, m, \qquad x \ge 0. \]</div>
+    </div>
+    <ul>
+      <li><strong>Interpretation:</strong> the term \(\rho\|\Delta_i x\|_2\) is a safety buffer. The more uncertainty, the bigger the buffer.</li>
+      <li><strong>Size:</strong> the same as the nominal problem: \(n\) variables and \(m\) constraints.</li>
+      <li><strong>Type:</strong> a second-order cone program, a special class of convex optimization that solvers handle efficiently. The robust counterpart is nearly as tractable as the nominal LP.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="dual-norm">
+    <h2>The dual norm and the general rule</h2>
+    <div class="box">
+      <span class="label">Definition (dual norm)</span>
+      <p>For a norm \(\|\cdot\|\), its dual norm is</p>
+      <div class="math-block">\[ \|s\|_* = \max_{\|x\| \le 1} s^\top x. \]</div>
+      <p>It measures how large the inner product with \(s\) can get when \(x\) ranges over the unit ball.</p>
+    </div>
+    <p>With this definition, the argument above works for any norm. Substitute \(u_i = \rho v_i\):</p>
+    <div class="math-block">\[ \max_{a_i \in \mathcal{U}_i} a_i^\top x = \bar a_i^\top x + \max_{\|u_i\| \le \rho} u_i^\top (\Delta_i x) = \bar a_i^\top x + \rho \max_{\|v_i\| \le 1} v_i^\top (\Delta_i x) = \bar a_i^\top x + \rho\, \|\Delta_i x\|_*. \]</div>
+    <div class="box theorem">
+      <span class="label">Proposition (norm uncertainty)</span>
+      <div class="math-block">\[ a_i^\top x \le b_i\ \ \forall a_i \in \mathcal{U}_i \quad\iff\quad \bar a_i^\top x + \rho\, \|\Delta_i x\|_* \le b_i. \]</div>
+    </div>
+    <p>The dual of \(\ell_p\) is \(\ell_q\) with \(\tfrac1p + \tfrac1q = 1\). The three cases to know:</p>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Set (norm on \(u\))</th><th>Dual norm</th><th>Robust counterpart</th><th>Tractability</th></tr></thead>
+      <tbody>
+        <tr><td>Box, \(\|u_i\|_\infty \le \rho\)</td><td>\(\ell_1\)</td><td>\(\bar a_i^\top x + \rho\|\Delta_i x\|_1 \le b_i\)</td><td>Linear</td></tr>
+        <tr><td>Ellipsoidal, \(\|u_i\|_2 \le \rho\)</td><td>\(\ell_2\)</td><td>\(\bar a_i^\top x + \rho\|\Delta_i x\|_2 \le b_i\)</td><td>Conic</td></tr>
+        <tr><td>Budget, \(\|u_i\|_1 \le \Gamma\)</td><td>\(\ell_\infty\)</td><td>\(\bar a_i^\top x + \Gamma\|\Delta_i x\|_\infty \le b_i\)</td><td>Linear</td></tr>
+      </tbody>
+    </table></div>
+    <details class="more"><summary>Why the \(\ell_1\) and \(\ell_\infty\) versions are linear</summary><div>
+      <p>\(\|\Delta_i x\|_1 = \sum_j |(\Delta_i x)_j|\). Add variables \(y_j \ge (\Delta_i x)_j\) and \(y_j \ge -(\Delta_i x)_j\), and replace the norm by \(\sum_j y_j\). For \(\|\Delta_i x\|_\infty\), add one variable \(t \ge \pm(\Delta_i x)_j\) for all \(j\). Both turn the robust constraint into ordinary linear constraints.</p>
+    </div></details>
+  </section>
+
+  <section class="block" id="picture">
+    <h2>Seeing it</h2>
+    <div class="widget" data-widget="adversary">
+      <div class="widget-head"><span class="label">Interactive</span><h4>The adversary's best response</h4><p>The shaded shape is the set of allowed perturbations \(u\) (with \(\rho = 1\)). For a given vector \(\Delta x\), the adversary picks the \(u\) in the set that maximizes \(u^\top (\Delta x)\). That maximum is the dual norm.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>Notice how the box always picks a corner (every component at its extreme, which gives the \(\ell_1\) norm), the ball points straight along \(\Delta x\), and the diamond puts its whole budget on the single largest component (the \(\ell_\infty\) norm).</p>
+    <div class="widget" data-widget="robust-region" data-sets="box,ball,budget">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Three sets, three robust regions</h4><p>The same two-variable problem as in class 13. Switch between the sets at the same \(\rho\) and compare the robust feasible regions.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>For the same \(\rho\), the box contains the ball, which contains the diamond. So the box gives the smallest robust region and the most conservative solution, and the budget set the least conservative one.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>The robust constraint is \(\max_{a_i \in \mathcal{U}_i} a_i^\top x \le b_i\). Solve the inner maximization and substitute.</li>
+      <li>For norm sets the answer is a safety buffer: \(\bar a_i^\top x + \rho\|\Delta_i x\|_* \le b_i\).</li>
+      <li>Box gives \(\ell_1\) (linear), ellipsoid gives \(\ell_2\) (second-order cone), budget gives \(\ell_\infty\) (linear).</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>"Derive the robust counterpart" questions usually follow the three steps on this page: split off the nominal part, solve the adversary's problem with a dual norm (or with LP duality, part b), and substitute back. Always state the final constraint explicitly and say whether the result is linear or conic.</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">\(\bar a = (1, 2)\), \(\Delta = I\), box set with \(\rho = 0.5\), and \(x = (2, -1)\). What is \(\max_{a \in \mathcal{U}} a^\top x\)?</div>
+      <div class="opts">
+        <button class="opt">0</button>
+        <button class="opt" data-correct>1.5</button>
+        <button class="opt">\(0.5\sqrt{5}\)</button>
+      </div>
+      <div class="feedback">\(\bar a^\top x = 2 - 2 = 0\), and the buffer is \(\rho\|x\|_1 = 0.5 \cdot 3 = 1.5\). The \(\sqrt{5}\) answer would be the ellipsoidal set.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="./"><small>Back to</small>Class 14 overview</a>
+    <a class="next" href="duality.html"><small>Next · 14b</small>Reformulation via duality</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 14, slides 2 to 10</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>14c Cutting planes · Opti</title>
+<meta name="description" content="Solving robust optimization by alternating a master problem and an adversarial subproblem, with an animated example and the nurse scheduling application.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/robust.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 14: Robust optimization algorithms</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 14 · Part c</p>
+  <h1>Cutting <em>planes</em></h1>
+  <p class="lede">Instead of reformulating, ask the adversary directly. Solve with the constraints you have, find the worst case for that solution, add it, and repeat until the adversary has nothing left to say.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#idea">The idea</a></li>
+      <li><a href="#algorithm">The algorithm</a></li>
+      <li><a href="#watch">Watch it run</a></li>
+      <li><a href="#bounds">Why each master gives a bound</a></li>
+      <li><a href="#nurses">Back to nurse scheduling</a></li>
+      <li><a href="#compare">Reformulation or cutting planes?</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="idea">
+    <h2>The idea</h2>
+    <p>Out of the infinitely many robust constraints, only a few actually matter at the optimum. Cutting planes finds them on demand. All it needs is the ability to solve the adversary's problem \(\max_{a_i \in \mathcal{U}_i} a_i^\top x\) for a given \(x\). No duality, no closed form.</p>
+    <div class="flow three">
+      <div class="step"><b>Master problem</b><span>Solve with a finite list of scenarios \(\bar{\mathcal{U}}_i \subseteq \mathcal{U}_i\).</span></div>
+      <div class="step"><b>Subproblem</b><span>For the master's \(x\), find the worst \(a_i^*\) in the full set \(\mathcal{U}_i\).</span></div>
+      <div class="step"><b>Update</b><span>If \(a_i^{*\top} x &gt; b_i\), add \(a_i^*\) to the list. Otherwise stop.</span></div>
+    </div>
+  </section>
+
+  <section class="block" id="algorithm">
+    <h2>The algorithm</h2>
+    <div class="algo">
+      <span class="label">Algorithm · cutting planes for robust optimization</span>
+      <p style="margin:0 0 6px">Inputs: \(b\), \(c\), sets \(\mathcal{U}_1, \dots, \mathcal{U}_m\), tolerance \(\varepsilon &gt; 0\).</p>
+      <ol>
+        <li>Initialize the master problem as the nominal problem: \(\bar{\mathcal{U}}_i = \{\bar a_i\}\) for all \(i\).</li>
+        <li>Solve the master problem \(\max c^\top x\) s.t. \(a_i^\top x \le b_i\ \forall a_i \in \bar{\mathcal{U}}_i\), \(x \ge 0\).
+          <ol>
+            <li>If it is infeasible, stop: the robust problem is infeasible too.</li>
+            <li>If it is unbounded, take some \(x\) with a very large objective, larger than a big constant \(M\).</li>
+            <li>Otherwise, take its optimal solution \(x\).</li>
+          </ol>
+        </li>
+        <li>For each row \(i\), solve the subproblem \(a_i^* = \arg\max_{a_i \in \mathcal{U}_i} a_i^\top x\). If \(a_i^{*\top} x &gt; b_i + \varepsilon\), add \(a_i^*\) to \(\bar{\mathcal{U}}_i\).</li>
+        <li>If no constraint was added, stop: \(x\) is robust optimal (within \(\varepsilon\)). Otherwise go to step 2.</li>
+      </ol>
+    </div>
+    <p>Each new master problem is the old one plus a few constraints, so it can be re-solved quickly from the previous solution with the dual simplex method.</p>
+  </section>
+
+  <section class="block" id="watch">
+    <h2>Watch it run</h2>
+    <div class="widget" data-widget="cutting-planes">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Cutting planes on a small robust LP</h4><p>Maximize \(3x_1 + 4x_2\) with an ellipsoidal set on the coefficients of \(a_1x_1 + a_2x_2 \le 12\). The shaded region is the true robust feasible set, whose boundary is curved. Each cut is a straight line that touches it from outside.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>The cuts approximate the curved robust boundary by straight lines, but only near the optimum, where it matters. A handful of iterations reaches the robust solution.</p>
+  </section>
+
+  <section class="block" id="bounds">
+    <h2>Why each master gives a bound</h2>
+    <p>The master problem only enforces the constraints for a subset \(\bar{\mathcal{U}}_i \subseteq \mathcal{U}_i\). It is a <strong>relaxation</strong> of the robust problem: fewer constraints, larger feasible region. For a maximization problem:</p>
+    <ul>
+      <li>Every master optimal value is an <strong>upper bound</strong> on the robust optimal value.</li>
+      <li>Adding cuts can only lower the master value, so the bounds get tighter at every iteration.</li>
+      <li>Every intermediate master solution, except the last, is infeasible for the robust problem. That is why it got cut off.</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>A practice question from last year: "At each iteration of the cutting planes algorithm for a robust maximization problem, we obtain an upper bound on the optimal value. True or false?" True, for exactly the reason above. For a minimization problem, the master gives a lower bound.</p>
+    </div>
+  </section>
+
+  <section class="block" id="nurses">
+    <h2>Back to nurse scheduling</h2>
+    <p>The nurse scheduling model from class 13 protects the nurse-to-patient insufficiency against every demand profile \(h\) in a polyhedral set \(\mathcal{U}\). Cutting planes solves it like this:</p>
+    <div class="algo">
+      <span class="label">Algorithm · cutting planes for nurse scheduling</span>
+      <ol>
+        <li>Start with the historical demand only: \(\bar{\mathcal{U}}^0 = \{h^{\text{hist}}\}\). Set \(\ell = 1\) and a tolerance \(\varepsilon\).</li>
+        <li>Solve the master problem with demand scenarios \(\bar{\mathcal{U}}^{\ell-1}\), and get a schedule \(z^\ell\).</li>
+        <li>Find the worst demand for that schedule: \(h^\ell \in \arg\max_{h \in \mathcal{U}} \text{npr}(h, z^\ell)\).</li>
+        <li>Add it: \(\bar{\mathcal{U}}^\ell = \{h^{\text{hist}}, h^1, \dots, h^\ell\}\), and set \(\ell \leftarrow \ell + 1\).</li>
+        <li>Stop when the relative change in insufficiency is below \(\varepsilon\). Otherwise go to step 2.</li>
+      </ol>
+    </div>
+    <p>Each subproblem is a linear program over demand profiles. Each new scenario is a realistic "bad week" for the current schedule.</p>
+  </section>
+
+  <section class="block" id="compare">
+    <h2>Reformulation or cutting planes?</h2>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th></th><th>Reformulation (robust counterpart)</th><th>Cutting planes</th></tr></thead>
+      <tbody>
+        <tr><td>How</td><td>Rewrite the inner max in closed form or with strong duality. Solve one problem.</td><td>Alternate between a master problem and adversarial subproblems.</td></tr>
+        <tr><td>Needs</td><td>A tractable dual or closed form for the set</td><td>Only a way to solve \(\max_{a_i \in \mathcal{U}_i} a_i^\top x\)</td></tr>
+        <tr><td>Scope</td><td>A wide range of standard sets</td><td>Any set, even without strong duality</td></tr>
+        <tr><td>Speed in benchmarks</td><td>Tends to win with ellipsoidal sets</td><td>Tends to win with polyhedral sets</td></tr>
+      </tbody>
+    </table></div>
+    <p class="muted">The benchmark comparison is from Bertsimas, Dunning and Lubin (2016), cited in the lecture: both methods are competitive in practice.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Cutting planes alternates a master problem (finite scenarios) and subproblems (worst case for the current solution).</li>
+      <li>It needs only an oracle for the adversary's problem.</li>
+      <li>For a maximization problem each master value is an upper bound, and the bounds tighten monotonically.</li>
+      <li>Robust optimization is tractable in practice with either method, for many problems and many sets.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">In a robust <em>minimization</em> problem solved with cutting planes, the master optimal values:</div>
+      <div class="opts">
+        <button class="opt">Are upper bounds and decrease over the iterations.</button>
+        <button class="opt" data-correct>Are lower bounds and increase over the iterations.</button>
+        <button class="opt">Are always equal to the robust optimal value.</button>
+      </div>
+      <div class="feedback">The master is a relaxation. For a minimization problem a relaxation gives a lower bound, and adding cuts can only raise it.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="duality.html"><small>Previous · 14b</small>Reformulation via duality</a>
+    <a class="next" href="./#flashcards"><small>Finish with</small>Flashcards and practice questions</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 14, slides 18 to 25</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

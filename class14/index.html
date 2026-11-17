@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class 14 · Robust optimization algorithms · Opti</title>
+<meta name="description" content="Solving robust optimization problems: robust counterparts with dual norms and LP duality, and the cutting planes algorithm.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="/">&larr; All classes</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 14 · Optimization under uncertainty</p>
+  <h1>Robust optimization <em>algorithms</em></h1>
+  <p class="lede">A robust constraint must hold for infinitely many data values. Two tools make that solvable: rewrite the worst case in closed form, or generate the worst cases one at a time.</p>
+</header>
+
+<nav class="chapter-toc" aria-label="On this page"><div class="container">
+  <ol>
+    <li><a href="#big-picture"><span>01</span>Big picture</a></li>
+    <li><a href="#parts"><span>02</span>Parts</a></li>
+    <li><a href="#flashcards"><span>03</span>Flashcards</a></li>
+    <li><a href="#quiz"><span>04</span>Test yourself</a></li>
+  </ol>
+</div></nav>
+
+<main class="container">
+<section class="block" id="big-picture">
+  <span class="section-badge">Overview</span>
+  <h2>The big picture</h2>
+  <p class="lead">Class 13 wrote down robust problems. Class 14 solves them. Every method rests on one move: replace "for all \(a_i\) in the set" by "for the worst \(a_i\) in the set".</p>
+  <div class="math-block">\[ a_i^\top x \le b_i\ \ \forall a_i \in \mathcal{U}_i \quad\iff\quad \max_{a_i \in \mathcal{U}_i} a_i^\top x \le b_i \]</div>
+  <div class="tabs">
+    <div class="tab-panel" data-tab="Analogy">
+      <p class="analogy">A building inspector must certify that a bridge survives every possible load in a range. Checking each load one by one is impossible. Either the engineer derives a formula for the worst load and checks only that (reformulation), or the inspector keeps proposing the nastiest load for the current design until the design survives them all (cutting planes).</p>
+    </div>
+    <div class="tab-panel" data-tab="Reformulation">
+      <p>Solve the adversary's inner problem analytically. For norm sets the answer is a dual norm, \(\bar a_i^\top x + \rho\|\Delta_i x\|_* \le b_i\). For polyhedral sets, LP duality turns the inner max into a min, whose variables join the problem. One solve, no iterations.</p>
+    </div>
+    <div class="tab-panel" data-tab="Cutting planes">
+      <p>Keep a finite list of scenarios. Solve the master problem, ask the adversary for the worst scenario for that solution, add it, repeat. Works for any set where the adversary's problem can be solved.</p>
+    </div>
+  </div>
+
+  <h3>The story of the class in three steps</h3>
+  <div class="flow three">
+    <div class="step"><b>14a · Norm sets</b><span>Box, ellipsoid, budget. The worst case is a dual norm.</span></div>
+    <div class="step"><b>14b · Duality</b><span>Polyhedral sets. The worst case is an LP, and duality removes it.</span></div>
+    <div class="step"><b>14c · Cutting planes</b><span>Ask the adversary, add the cut, repeat.</span></div>
+  </div>
+
+  <div class="callout">
+    <span class="label">Takeaways from the lecture</span>
+    <ol style="margin:0">
+      <li>Robust optimization can be solved by reformulation (robust counterpart via strong duality) or by cutting planes (master problem plus subproblem).</li>
+      <li>Cutting planes also works without strong duality.</li>
+      <li>Robust problems are tractable in practice for a wide range of problems and uncertainty sets.</li>
+      <li>Robust solutions protect against real-world data perturbations and changes in the operating environment.</li>
+    </ol>
+  </div>
+
+  <h3>For your note sheet</h3>
+  <div class="sheet">
+    <div><b>Norm set</b>\(a_i = \bar a_i + \Delta_i^\top u_i,\ \|u_i\| \le \rho\)<br>\(\Rightarrow \bar a_i^\top x + \rho\|\Delta_i x\|_* \le b_i\)</div>
+    <div><b>Dual norms</b>\(\ell_\infty \leftrightarrow \ell_1\) (box, linear)<br>\(\ell_2 \leftrightarrow \ell_2\) (ellipsoid, conic)<br>\(\ell_1 \leftrightarrow \ell_\infty\) (budget, linear)</div>
+    <div><b>Polyhedral \(D_iu_i \le d_i\)</b>\(\bar a_i^\top x + p_i^\top d_i \le b_i\)<br>\(p_i^\top D_i = x^\top,\ p_i \ge 0\)</div>
+    <div><b>Cutting planes</b>Master = relaxation. Max problem: master value is an upper bound, decreasing. Stop when no cut is violated.</div>
+  </div>
+</section>
+
+<section class="block" id="parts">
+  <span class="section-badge">Parts</span>
+  <h2>Explore the class</h2>
+  <div class="subpage-list">
+    <a class="subpage-card" href="norm-sets.html"><span class="sp-num">14a</span><div><div class="sp-title">Norm sets and dual norms</div><div class="sp-desc">The direct method, the ellipsoidal proof, dual norms and the adversary's best response</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="duality.html"><span class="sp-num">14b</span><div><div class="sp-title">Reformulation via duality</div><div class="sp-desc">Polyhedral sets, the max-to-min trick, a worked budget example and the full table</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="cutting-planes.html"><span class="sp-num">14c</span><div><div class="sp-title">Cutting planes</div><div class="sp-desc">Master and subproblem, an animated run, bounds, nurse scheduling, which method to use</div></div><span class="sp-arrow">&rarr;</span></a>
+  </div>
+</section>
+
+<section class="block flashcards-section" id="flashcards">
+  <span class="section-badge">Quick review</span>
+  <h2>Flashcards</h2>
+  <p>Click a card to flip it. Arrow keys move between cards once a card has focus.</p>
+  <div class="flashcards">
+<script type="application/json">
+[
+ {"q": "Why is the robust problem not directly solvable?", "a": "Each robust constraint is either infinitely many constraints (one per \\(a_i \\in \\mathcal{U}_i\\)) or one ill-structured constraint containing a max."},
+ {"q": "What is the direct method?", "a": "Solve \\(g_i(x) = \\max_{a_i \\in \\mathcal{U}_i} a_i^\\top x\\) analytically and replace the robust constraint by \\(g_i(x) \\le b_i\\)."},
+ {"q": "Define a norm uncertainty set.", "a": "\\(\\mathcal{U}_i = \\{\\bar a_i + \\Delta_i^\\top u_i : \\|u_i\\| \\le \\rho\\}\\). \\(\\rho\\) sets the size, \\(\\Delta_i\\) the scaling, the norm the shape."},
+ {"q": "Define the dual norm.", "a": "\\(\\|s\\|_* = \\max_{\\|x\\| \\le 1} s^\\top x\\)."},
+ {"q": "Robust counterpart for a norm set?", "a": "\\(\\bar a_i^\\top x + \\rho\\|\\Delta_i x\\|_* \\le b_i\\). The second term is a safety buffer."},
+ {"q": "Dual norms of \\(\\ell_\\infty\\), \\(\\ell_2\\), \\(\\ell_1\\)?", "a": "\\(\\ell_1\\), \\(\\ell_2\\), \\(\\ell_\\infty\\). In general \\(\\ell_p\\) and \\(\\ell_q\\) with \\(1/p + 1/q = 1\\)."},
+ {"q": "Which robust counterparts are linear and which are conic?", "a": "Box, budget, budget-box and polyhedral: linear. Ellipsoidal: second-order cone (conic)."},
+ {"q": "Prove \\(\\max_{\\|u\\|_2 \\le \\rho} u^\\top w = \\rho\\|w\\|_2\\).", "a": "\\(u^* = \\rho w/\\|w\\|_2\\) is feasible and attains \\(\\rho\\|w\\|_2\\). Cauchy-Schwarz gives \\(u^\\top w \\le \\|u\\|_2\\|w\\|_2 \\le \\rho\\|w\\|_2\\) for any feasible \\(u\\)."},
+ {"q": "Robust counterpart for a polyhedral set \\(D_iu_i \\le d_i\\)?", "a": "\\(\\bar a_i^\\top x + p_i^\\top d_i \\le b_i\\), \\(p_i^\\top D_i = x^\\top\\), \\(p_i \\ge 0\\). Linear, with extra variables \\(p_i\\)."},
+ {"q": "Why can you drop the min in \\(\\min_{p \\in \\mathcal{V}} g(p) \\le b\\)?", "a": "It holds exactly when some \\(p \\in \\mathcal{V}\\) has \\(g(p) \\le b\\), so \\(p\\) can be added as a decision variable."},
+ {"q": "Describe the cutting planes method.", "a": "Start with the nominal problem as master. Solve it, find the worst \\(a_i^*\\) for the solution, add violated ones as constraints, repeat until no constraint is violated."},
+ {"q": "Is the master value an upper or lower bound?", "a": "The master is a relaxation. For a max problem it is an upper bound that decreases over the iterations. For a min problem, a lower bound that increases."},
+ {"q": "What does cutting planes need that reformulation does not?", "a": "Only an oracle that solves \\(\\max_{a_i \\in \\mathcal{U}_i} a_i^\\top x\\). It works even without strong duality."},
+ {"q": "Which method tends to be faster in practice?", "a": "Benchmarks: cutting planes tends to win with polyhedral sets, reformulation with ellipsoidal sets. Both are competitive."}
+]
+</script>
+  </div>
+</section>
+
+<section class="block" id="quiz">
+  <span class="section-badge">Exam practice</span>
+  <h2>Test yourself</h2>
+  <p>Multiple choice in the style of the midterm. Say your one-line justification before you click.</p>
+
+  <div class="quiz">
+    <div class="q-label">Question 1 · Cutting planes</div>
+    <div class="q-text">Cutting planes for \(\max c^\top x\) s.t. \(a_i^\top x \le b_i\ \forall a_i \in \mathcal{U}_i\). At each iteration we obtain an upper bound on the robust optimal value. True or false?</div>
+    <div class="opts">
+      <button class="opt" data-correct>True</button>
+      <button class="opt">False</button>
+    </div>
+    <div class="feedback">The master problem keeps only finitely many of the constraints, so it is a relaxation of a maximization problem. Its optimal value is at least the robust optimum.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 2 · Dual norm</div>
+    <div class="q-text">The set is \(\{\bar a + u : \|u\|_1 \le \Gamma\}\). The robust counterpart of \(a^\top x \le b\) is:</div>
+    <div class="opts">
+      <button class="opt">\(\bar a^\top x + \Gamma\|x\|_1 \le b\)</button>
+      <button class="opt">\(\bar a^\top x + \Gamma\|x\|_2 \le b\)</button>
+      <button class="opt" data-correct>\(\bar a^\top x + \Gamma\|x\|_\infty \le b\)</button>
+    </div>
+    <div class="feedback">The dual of \(\ell_1\) is \(\ell_\infty\). The adversary spends its whole budget on the single coordinate where \(|x_j|\) is largest.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 3 · Tractability</div>
+    <div class="q-text">Which robust counterpart is not a linear program?</div>
+    <div class="opts">
+      <button class="opt">Box uncertainty</button>
+      <button class="opt" data-correct>Ellipsoidal uncertainty</button>
+      <button class="opt">Polyhedral uncertainty</button>
+    </div>
+    <div class="feedback">The ellipsoidal buffer \(\rho\|\Delta x\|_2\) gives a second-order cone constraint. It is still convex and efficiently solvable, but not linear.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 4 · Computation</div>
+    <div class="q-text">\(\bar a = (3, 1)\), \(\Delta = I\), ellipsoidal set with \(\rho = 2\), \(x = (3, 4)\). What is \(\max_{a \in \mathcal{U}} a^\top x\)?</div>
+    <div class="opts">
+      <button class="opt">13</button>
+      <button class="opt" data-correct>23</button>
+      <button class="opt">27</button>
+    </div>
+    <div class="feedback">\(\bar a^\top x = 9 + 4 = 13\), and \(\rho\|x\|_2 = 2 \cdot 5 = 10\). Total 23. A box set with the same \(\rho\) would give \(13 + 2 \cdot 7 = 27\).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 5 · Duality</div>
+    <div class="q-text">In the polyhedral reformulation, why are the new dual variables \(p_i\) nonnegative?</div>
+    <div class="opts">
+      <button class="opt">Because \(x \ge 0\).</button>
+      <button class="opt" data-correct>Because they are the multipliers of the inequality constraints \(D_i u_i \le d_i\) in the adversary's maximization problem.</button>
+      <button class="opt">Because the robust problem is a maximization.</button>
+    </div>
+    <div class="feedback">In the dual of a max problem, a \(\le\) constraint gets a nonnegative multiplier. The free primal variables \(u_i\) produce the equality \(p_i^\top D_i = x^\top\).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 6 · Sets compared</div>
+    <div class="q-text">Same \(\rho\), same \(\Delta\). Rank the robust optimal values of a maximization problem under the box (\(Z_\infty\)), ellipsoidal (\(Z_2\)) and budget (\(Z_1\)) sets.</div>
+    <div class="opts">
+      <button class="opt">\(Z_\infty \ge Z_2 \ge Z_1\)</button>
+      <button class="opt" data-correct>\(Z_\infty \le Z_2 \le Z_1\)</button>
+      <button class="opt">They cannot be ranked.</button>
+    </div>
+    <div class="feedback">For the same radius, the \(\ell_1\) ball sits inside the \(\ell_2\) ball, which sits inside the \(\ell_\infty\) ball. A larger set means a smaller robust feasible region and a lower maximum.</div>
+  </div>
+
+  <p class="quiz-score" aria-live="polite"></p>
+</section>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 14</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

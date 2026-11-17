@@ -71,7 +71,7 @@
       var r = parseFloat(rho.value);
       b.querySelector(".rhoo").textContent = r.toFixed(2);
       var s = P.setup(canvas, 0.62), pal = P.palette(), ctx = s.ctx;
-      var v = new P.View(s.w, s.h, -0.4, 6.6, -0.4, -0.4 + 7 * s.h / s.w, 0);
+      var v = new P.View(s.w, s.h, -0.4, -0.4 + 5 * s.w / s.h, -0.4, 4.6, 0);
       P.clear(ctx, s.w, s.h, pal.bg); P.axes(ctx, v, pal, { gx: 1, gy: 1 });
       // robust feasible region (shaded by pixel test)
       var rgb = pal.accent, step = 3;
@@ -87,7 +87,7 @@
       P.line(ctx, v.px(0), v.py(LP.b / LP.abar[1]), v.px(LP.b / LP.abar[0]), v.py(0));
       ctx.setLineDash([]); ctx.strokeStyle = pal.ink3;
       P.line(ctx, v.px(LP.x1max), v.py(0), v.px(LP.x1max), v.py(6.6)); ctx.restore();
-      P.text(ctx, "nominal: 2x₁ + 3x₂ ≤ 12", v.px(0.15), v.py(4.35), pal.ink2, 12);
+      P.text(ctx, "nominal: 2x₁ + 3x₂ ≤ 12", v.px(0.25), v.py(4.3), pal.ink2, 12);
       P.text(ctx, "x₁ ≤ 4", v.px(LP.x1max) + 6, v.py(3.6), pal.ink3, 12);
       // robust boundary curve
       ctx.save(); ctx.strokeStyle = pal.accent; ctx.lineWidth = 2.4; ctx.beginPath();
@@ -205,7 +205,7 @@
     b.querySelector(".reset").addEventListener("click", reset);
     function draw() {
       var s = P.setup(canvas, 0.62), pal = P.palette(), ctx = s.ctx;
-      var v = new P.View(s.w, s.h, -0.4, 6.6, -0.4, -0.4 + 7 * s.h / s.w, 0);
+      var v = new P.View(s.w, s.h, -0.4, -0.4 + 5 * s.w / s.h, -0.4, 4.6, 0);
       P.clear(ctx, s.w, s.h, pal.bg); P.axes(ctx, v, pal, { gx: 1, gy: 1 });
       // true robust region
       ctx.save(); ctx.fillStyle = pal.soft;
