@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>19c Convergence and step sizes · Opti</title>
+<meta name="description" content="How stochastic gradient descent converges: the noise ball with constant steps, the gradient-norm guarantee, diminishing step sizes, and why to keep the best iterate.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/sgd.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 19: Stochastic gradient descent</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 19 · Part c</p>
+  <h1>Convergence and <em>step sizes</em></h1>
+  <p class="lede">With a constant step, SGD rushes towards the optimum and then keeps bouncing around it. The two theorems in this part say how fast the first phase is, how large the bouncing is, and how shrinking the step removes it.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#noise-ball">Two phases: fast, then noisy</a></li>
+      <li><a href="#theorem1">The objective-value guarantee</a></li>
+      <li><a href="#theorem2">The gradient guarantee</a></li>
+      <li><a href="#steps">Constant or diminishing steps</a></li>
+      <li><a href="#play">See it</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="noise-ball">
+    <h2>Two phases: fast, then noisy</h2>
+    <p>Run SGD with a constant step size on a well-behaved problem and two phases appear:</p>
+    <ol>
+      <li><strong>Linear convergence</strong> to a neighbourhood of the optimum. Far away, most data points agree on the rough direction, so the noisy steps still make steady progress.</li>
+      <li><strong>Persistent fluctuation</strong> inside that neighbourhood, the "noise ball". Near the optimum the data points disagree, and the random direction keeps kicking the iterate around.</li>
+    </ol>
+    <p>Gradient descent converges to the stationary point itself, which for a convex problem is the global optimum. SGD gets close, then keeps moving. These noisy patterns can help escape poor local optima in non-convex problems. They also mean you should return the <strong>best solution visited</strong>, not simply the last one.</p>
+  </section>
+
+  <section class="block" id="theorem1">
+    <h2>The objective-value guarantee</h2>
+    <div class="box theorem">
+      <span class="label">Theorem (convergence in expected objective value)</span>
+      <p>Let \(f\) be \(M\)-smooth and \(m\)-strongly convex. Suppose the stochastic gradients are unbiased with bounded variance, \(\mathbb{E}\|\nabla f_i(x) - \nabla f(x)\|^2 \le \sigma^2\) for all \(x\). Then SGD with constant step size \(0 &lt; \alpha \le 1/M\) satisfies</p>
+      <div class="math-block">\[ \mathbb{E}\big[f(x_k)\big] - z^* \ \le\ \underbrace{(1 - \alpha m)^k \big(f(x_0) - z^*\big)}_{\text{shrinks linearly}} \ +\ \underbrace{\frac{\alpha M \sigma^2}{2m}}_{\text{noise floor}}. \]</div>
+    </div>
+    <ul>
+      <li>The first term is the same kind of linear rate as gradient descent in class 18 (with \(\alpha = 1/M\) it is exactly \((1 - m/M)^k\)).</li>
+      <li>The second term does not go to zero. It is the size of the noise ball, and it is proportional to the step size \(\alpha\) and to the gradient noise \(\sigma^2\).</li>
+      <li>So a smaller step gives a smaller noise ball but a slower first phase. That is the central trade-off of SGD.</li>
+    </ul>
+    <details class="more"><summary>Proof sketch (optional in the lecture)</summary><div>
+      <p><strong>1.</strong> Smoothness and the bounded variance give, in expectation, \(\mathbb{E}f(x_{k+1}) - z^* \le \mathbb{E}f(x_k) - z^* - \tfrac{\alpha}{2}\mathbb{E}\|\nabla f(x_k)\|^2 + \tfrac{M\alpha^2\sigma^2}{2}\) for \(\alpha \le 1/M\).</p>
+      <p><strong>2.</strong> Strong convexity gives \(\|\nabla f(x_k)\|^2 \ge 2m(f(x_k) - z^*)\), exactly as in class 18.</p>
+      <p><strong>3.</strong> Combine: \(\mathbb{E}f(x_{k+1}) - z^* \le (1 - \alpha m)(\mathbb{E}f(x_k) - z^*) + \tfrac{M\alpha^2\sigma^2}{2}\). Unroll the recursion and bound the geometric sum \(\sum_\ell (1 - \alpha m)^\ell \le 1/(\alpha m)\).</p>
+    </div></details>
+  </section>
+
+  <section class="block" id="theorem2">
+    <h2>The gradient guarantee</h2>
+    <p>Without convexity we cannot hope for the optimal value, but we can ask how small the gradient gets.</p>
+    <div class="box theorem">
+      <span class="label">Theorem (convergence of the gradient)</span>
+      <p>Let \(f\) be \(M\)-smooth and bounded below by \(z^*\). Sample indices independently and uniformly, and assume \(\mathbb{E}\|\nabla f_i(x)\|^2 \le G^2\) for all \(x\). Then SGD with positive step sizes \(\alpha_\ell\) satisfies, for \(k \ge 1\),</p>
+      <div class="math-block">\[ \min_{\ell = 0, \dots, k-1} \mathbb{E}\big\|\nabla f(x_\ell)\big\|^2 \ \le\ \frac{f(x_0) - z^*}{\sum_{\ell=0}^{k-1}\alpha_\ell} \ +\ \frac{MG^2}{2}\, \frac{\sum_{\ell=0}^{k-1}\alpha_\ell^2}{\sum_{\ell=0}^{k-1}\alpha_\ell}. \]</div>
+    </div>
+    <p>With a constant step \(\alpha_\ell = \alpha\), the right side becomes \(\dfrac{f(x_0) - z^*}{k\alpha} + \dfrac{MG^2\alpha}{2}\), that is \(O(1/k) + O(\alpha)\). Gradient descent achieves \(O(1/k)\) alone. The \(O(\alpha)\) term is SGD's irreducible error for a fixed step.</p>
+  </section>
+
+  <section class="block" id="steps">
+    <h2>Constant or diminishing steps</h2>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Constant">
+        <p>Converges to an approximate solution: fast at first, then stuck in a noise ball whose size grows with \(\alpha\).</p>
+      </div>
+      <div class="tab-panel" data-tab="Diminishing">
+        <p>Steps such as \(\alpha_k = \alpha/k\) or \(\alpha_k = \alpha/\sqrt{k}\). In the gradient bound, \(\sum_\ell \alpha_\ell^2 / \sum_\ell \alpha_\ell \to 0\) when the steps shrink but their sum diverges (the same condition as in class 18). So SGD can converge to an exact solution, at the cost of slower convergence.</p>
+      </div>
+      <div class="tab-panel" data-tab="In practice">
+        <p>Large steps early, to jump to better regions and avoid poor solutions. Small steps later, to refine locally. Diminishing schedules perform well in practice, but finding a good schedule takes experimentation.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="play">
+    <h2>See it</h2>
+    <div class="widget" data-widget="sgd-playground" data-batch="1">
+      <div class="widget-head"><span class="label">Interactive</span><h4>The noise ball</h4><p>SGD (B = 1) fitting a line to 40 points. The upper plot shows the path in parameter space. The lower plot shows the optimality gap on a log scale, with gradient descent in grey. Try a smaller \(\alpha\), then a diminishing schedule.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>With a constant step, the gold gap curve drops quickly and then levels off at a floor while gradient descent keeps going down. Halve \(\alpha\) and the floor drops, but the first phase slows down. Switch to \(\alpha/\sqrt{k+1}\) and the floor keeps sinking, slowly. With \(\alpha/(k+1)\) the steps shrink so fast that the iterates stall long before the optimum: the slower convergence the lecture warns about, in its most extreme form.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Constant step, strongly convex: \(\mathbb{E}f(x_k) - z^* \le (1 - \alpha m)^k(f(x_0) - z^*) + \alpha M\sigma^2/(2m)\). Linear phase plus a noise floor.</li>
+      <li>Smooth, possibly non-convex: \(\min_\ell \mathbb{E}\|\nabla f(x_\ell)\|^2 = O(1/k) + O(\alpha)\) with a constant step.</li>
+      <li>Diminishing steps remove the floor, slowly. Keep the best iterate, not the last.</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>Be ready to explain the two terms of the bound in words: the first is the forgetting of the starting point, the second is the price of noisy gradients. And to say what changing \(\alpha\) does to each.</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">You halve the constant step size of SGD on a strongly convex problem. According to the bound, what happens?</div>
+      <div class="opts">
+        <button class="opt">Both terms get smaller.</button>
+        <button class="opt" data-correct>The noise floor halves, but the linear phase slows down.</button>
+        <button class="opt">Nothing changes, since the gradient estimate is unbiased.</button>
+      </div>
+      <div class="feedback">The floor \(\alpha M\sigma^2/(2m)\) is proportional to \(\alpha\). The contraction factor \(1 - \alpha m\) moves closer to 1, so the first term shrinks more slowly.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="algorithm.html"><small>Previous · 19b</small>The SGD algorithm</a>
+    <a class="next" href="mini-batches.html"><small>Next · 19d</small>Mini-batches and practice</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 19, slides 18 to 21 and appendix · Background on smoothness and strong convexity: Boyd and Vandenberghe 9.1.2</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

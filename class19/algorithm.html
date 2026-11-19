@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>19b The SGD algorithm · Opti</title>
+<meta name="description" content="The stochastic gradient descent algorithm, randomized and cyclic sampling, unbiased gradient estimates, the regression update, and backpropagation worked through on a small network.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/sgd.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 19: Stochastic gradient descent</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 19 · Part b</p>
+  <h1>The SGD <em>algorithm</em></h1>
+  <p class="lede">Same loop as gradient descent, with one change: each step follows the gradient of a single randomly chosen data point. On average that is the right direction. Any single step can be wrong.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#algorithm">The algorithm</a></li>
+      <li><a href="#sampling">Choosing the index</a></li>
+      <li><a href="#descent">Not a descent method</a></li>
+      <li><a href="#regression">SGD for linear regression</a></li>
+      <li><a href="#network">SGD on a neural network</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="algorithm">
+    <h2>The algorithm</h2>
+    <p>The objective is a sum, or an expectation, of component functions:</p>
+    <div class="math-block">\[ \min_x\ f(x) = \frac1n \sum_{i=1}^n f_i(x). \]</div>
+    <div class="algo">
+      <span class="label">Algorithm · stochastic gradient descent</span>
+      <ol>
+        <li>Choose a starting point \(x_0\). Set \(k = 0\).</li>
+        <li>Repeat until a stopping criterion holds:
+          <ol>
+            <li>Choose an index \(i_k \in \{1, \dots, n\}\).</li>
+            <li>Take the direction \(d_k = -\nabla f_{i_k}(x_k)\).</li>
+            <li>Choose a step size \(\alpha_k &gt; 0\), often called the learning rate.</li>
+            <li>Update \(x_{k+1} = x_k + \alpha_k d_k\).</li>
+            <li>Set \(k \leftarrow k + 1\).</li>
+          </ol>
+        </li>
+      </ol>
+    </div>
+    <p>Compare with class 18: the only change is step 2.2, where \(\nabla f(x_k)\) is replaced by \(\nabla f_{i_k}(x_k)\).</p>
+  </section>
+
+  <section class="block" id="sampling">
+    <h2>Choosing the index</h2>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Randomized rule">
+        <p>Draw \(i_k\) uniformly at random from \(\{1, \dots, n\}\). Then the stochastic gradient is an <strong>unbiased</strong> estimate of the true gradient, conditional on \(x\):</p>
+        <div class="math-block">\[ \mathbb{E}\big[\nabla f_{i_k}(x)\big] = \sum_{i=1}^n \nabla f_i(x)\, \mathbb{P}(i_k = i) = \frac1n \sum_{i=1}^n \nabla f_i(x) = \nabla f(x). \]</div>
+        <p>Right on average, wrong in any single draw.</p>
+      </div>
+      <div class="tab-panel" data-tab="Cyclic rule">
+        <p>Go through the data in order: \(i_k = 1, 2, \dots, n, 1, 2, \dots, n, \dots\). One full pass over the data is called an epoch. Simple, but not random, so the unbiasedness argument does not apply.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="descent">
+    <h2>Not a descent method</h2>
+    <p>In class 18, \(d_k = -\nabla f(x_k)\) always satisfied \(\nabla f(x_k)^\top d_k &lt; 0\), so small steps always decreased \(f\). With SGD it can happen that</p>
+    <div class="math-block">\[ \nabla f(x_k)^\top \nabla f_{i_k}(x_k) &lt; 0, \]</div>
+    <p>so \(d_k = -\nabla f_{i_k}(x_k)\) points uphill for the full objective. The algorithm need not make progress at every iteration, however small the step.</p>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>Last year's midterm: "Stochastic gradient descent with constant step size is a descent algorithm. True or false?" False: errors in the gradient estimate can make \(f\) increase at an iteration. Gradient descent with a small enough step is a descent algorithm, Newton's method with step 1 is not necessarily.</p>
+    </div>
+  </section>
+
+  <section class="block" id="regression">
+    <h2>SGD for linear regression</h2>
+    <p>With \(f_i(\beta) = \tfrac12\big(y_i - \sum_j x_{ij}\beta_j\big)^2\), the gradient of one term is</p>
+    <div class="math-block">\[ \frac{\partial f_{i_k}}{\partial \beta_j} = -x_{i_k j}\big(y_{i_k} - x_{i_k}^\top \beta\big) \quad\Longrightarrow\quad \beta_j^{k+1} = \beta_j^k + \eta\, x_{i_k j}\big(y_{i_k} - x_{i_k}^\top \beta^k\big). \]</div>
+    <p>Each step adjusts the weights using one data point. If the prediction is too low (\(x_{i_k}^\top\beta &lt; y_{i_k}\)) and \(x_{i_k j} &gt; 0\), \(\beta_j\) goes up to raise the prediction. If \(x_{i_k j} &lt; 0\), it goes down, which also raises the prediction. The opposite holds when the prediction is too high.</p>
+    <div class="widget" data-widget="sgd-lucky">
+      <div class="widget-head"><span class="label">Interactive</span><h4>One data point at a time</h4><p>Fit a line by SGD. Each click samples one point and moves the line towards it. Count how often a step actually lowers the full loss.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>The first few steps are all lucky: the line sits above every point, so every point pulls it down. Soon the points start to disagree, and lucky and unlucky steps alternate. A single step improves the fit for its own point, not necessarily on average. Only the expected step points downhill. Part c turns this noise into a bound.</p>
+  </section>
+
+  <section class="block" id="network">
+    <h2>SGD on a neural network</h2>
+    <p>The lecture's example: two inputs, one hidden layer with two ReLU nodes, one output, loss \(\tfrac12(y - \hat y_5)^2\), and a single data point \(x = (0.5, 0.8)\), \(y = 1\).</p>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Forward pass">
+        <div class="math-block">\[ \begin{aligned} h_3 &= \max(w_{13}x_1 + w_{23}x_2 + b_3,\ 0) = 0.52 \\ h_4 &= \max(w_{14}x_1 + w_{24}x_2 + b_4,\ 0) = 0.43 \\ \hat y_5 &= \max(w_{35}h_3 + w_{45}h_4 + b_5,\ 0) = 0.646 \end{aligned} \qquad L = \tfrac12(1 - 0.646)^2 = 0.063. \]</div>
+      </div>
+      <div class="tab-panel" data-tab="Last layer">
+        <p>Differentiate the loss directly (the output ReLU is active, so it passes the derivative through):</p>
+        <div class="math-block">\[ \frac{\partial L}{\partial w_{35}} = -h_3(y - \hat y_5) = -0.184, \qquad \frac{\partial L}{\partial w_{45}} = -h_4(y - \hat y_5) = -0.152, \qquad \frac{\partial L}{\partial b_5} = -(y - \hat y_5) = -0.354. \]</div>
+        <p>The network undershoots (0.646 against 1). Since \(h_3, h_4 &gt; 0\), raising these weights raises \(\hat y_5\). All three derivatives are negative, so SGD will increase them.</p>
+      </div>
+      <div class="tab-panel" data-tab="Chain rule">
+        <p>One layer back, chain the derivatives through \(\hat y_5\) and \(h_3\):</p>
+        <div class="math-block">\[ \frac{\partial L}{\partial w_{13}} = \frac{\partial L}{\partial \hat y_5}\, \frac{\partial \hat y_5}{\partial h_3}\, \frac{\partial h_3}{\partial w_{13}} = -(y - \hat y_5)\, w_{35}\, x_1 = -0.089. \]</div>
+        <p>The same logic gives \(\partial L/\partial w_{23} = -0.142\), \(\partial L/\partial b_3 = -0.177\), \(\partial L/\partial w_{14} = -0.035\), \(\partial L/\partial w_{24} = -0.057\), \(\partial L/\partial b_4 = -0.071\).</p>
+      </div>
+      <div class="tab-panel" data-tab="Update">
+        <p>With learning rate \(\eta = 0.1\): \(w_{ij} \leftarrow w_{ij} - \eta\, \partial L/\partial w_{ij}\) and \(b_i \leftarrow b_i - \eta\, \partial L/\partial b_i\). For example \(w_{35}\) goes from 0.5 to 0.5184 and \(b_5\) from 0.3 to 0.3354. Then repeat with the next data point.</p>
+      </div>
+    </div>
+    <div class="widget" data-widget="nn-backprop">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Forward, backward, update</h4><p>Step through one SGD iteration on the lecture's network. Keep pressing to repeat the update on the same data point and watch the loss fall.</p></div>
+      <div class="widget-body"></div>
+    </div>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>SGD: \(x_{k+1} = x_k - \alpha_k \nabla f_{i_k}(x_k)\), with \(i_k\) random (or cyclic).</li>
+      <li>With uniform sampling the stochastic gradient is unbiased: \(\mathbb{E}[\nabla f_{i_k}(x)] = \nabla f(x)\).</li>
+      <li>A single step can increase \(f\). SGD is not a descent method.</li>
+      <li>In a neural network, one SGD step is a forward pass, a backward pass (chain rule) and an update, all for one data point.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">In the regression update, a data point has \(x_{i_k j} &lt; 0\) and the prediction is too high. What happens to \(\beta_j\)?</div>
+      <div class="opts">
+        <button class="opt">It decreases.</button>
+        <button class="opt" data-correct>It increases.</button>
+        <button class="opt">It stays the same.</button>
+      </div>
+      <div class="feedback">The residual \(y - x^\top\beta\) is negative and \(x_{i_k j} &lt; 0\), so their product is positive and \(\beta_j\) goes up. Since the feature is negative, a larger \(\beta_j\) lowers the prediction, as it should.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="why-stochastic.html"><small>Previous · 19a</small>Why stochastic gradients</a>
+    <a class="next" href="convergence.html"><small>Next · 19c</small>Convergence and step sizes</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 19, slides 7 to 17</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

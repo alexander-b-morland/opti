@@ -71,7 +71,7 @@
       </div>
       <div class="tab-panel" data-tab="Diminishing">
         <div class="math-block">\[ \alpha_k \to 0 \qquad \text{and} \qquad \sum_{k=0}^\infty \alpha_k = \infty. \]</div>
-        <p>For example \(\alpha_k = 1/k\). The steps shrink, so the method eventually settles down. But not too fast: the infinite sum ensures the iterates can still travel any distance. This rule becomes important for stochastic gradient descent in class 20.</p>
+        <p>For example \(\alpha_k = 1/k\). The steps shrink, so the method eventually settles down. But not too fast: the infinite sum ensures the iterates can still travel any distance. This rule becomes important for stochastic gradient descent in class 19.</p>
       </div>
       <div class="tab-panel" data-tab="Exact line search">
         <div class="math-block">\[ \alpha_k \in \arg\min_{\alpha \ge 0} f(x_k + \alpha d_k). \]</div>
@@ -197,7 +197,7 @@
     <div class="exam-note">
       <span class="label">How this shows up on the exam</span>
       <p>"The larger the step size, the faster the convergence" is a favourite statement to judge. The right answer is that we do not know in general: larger steps help only while the function keeps decreasing along the direction.</p>
-      <p>You may also be shown contour plots with iterate paths and asked to match each to a method. A zigzag across a narrow valley is gradient descent. Wobbly, noisy paths are stochastic gradient descent (class 20). Very few, direct steps are Newton's method (class 19).</p>
+      <p>You may also be shown contour plots with iterate paths and asked to match each to a method. A zigzag across a narrow valley is gradient descent. Wobbly, noisy paths are stochastic gradient descent (class 19). Very few, direct steps are Newton's method (class 20).</p>
     </div>
   </section>
 

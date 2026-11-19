@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>19d Mini-batches and practice · Opti</title>
+<meta name="description" content="Mini-batch stochastic gradient descent as a middle ground between SGD and gradient descent, the heart disease case study, and practical rules for initialization, batching, step sizes and stopping.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/sgd.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 19: Stochastic gradient descent</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 19 · Part d</p>
+  <h1>Mini-batches and <em>practice</em></h1>
+  <p class="lede">Between one data point and all of them lies a whole range of batch sizes. Mini-batches keep most of SGD's speed and remove much of its noise. This part closes with the lecture's practical checklist.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#minibatch">SGD with mini-batches</a></li>
+      <li><a href="#continuum">A continuum from SGD to GD</a></li>
+      <li><a href="#play">Try batch sizes</a></li>
+      <li><a href="#heart">Case study: predicting heart disease</a></li>
+      <li><a href="#checklist">Practical checklist</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="minibatch">
+    <h2>SGD with mini-batches</h2>
+    <p>Instead of one index, sample a batch \(I_k \subseteq \{1, \dots, n\}\) of size \(B\) and average its gradients:</p>
+    <div class="math-block">\[ x_{k+1} = x_k - \alpha_k \cdot \frac1B \sum_{i \in I_k} \nabla f_i(x_k). \]</div>
+    <p>The algorithm is the same as before, with steps 2.1 and 2.2 replaced by: choose a batch \(I_k\) with \(|I_k| = B\), and take \(d_k = -\frac1B\sum_{i \in I_k}\nabla f_i(x_k)\).</p>
+    <div class="callout">
+      <span class="label">Why it helps: variance reduction</span>
+      <p>Averaging \(B\) independent noisy estimates reduces their variance, roughly by a factor \(B\) when the batch is sampled with replacement. A less noisy direction means a smaller noise ball for the same step size.</p>
+    </div>
+  </section>
+
+  <section class="block" id="continuum">
+    <h2>A continuum from SGD to GD</h2>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th>Batch size</th><th>Method</th><th>Character</th></tr></thead>
+      <tbody>
+        <tr><td>\(B = 1\)</td><td>SGD</td><td>Fast iterations, noisy, more chances to escape poor solutions</td></tr>
+        <tr><td>\(1 &lt; B &lt; n\)</td><td>Mini-batch SGD</td><td>The middle ground</td></tr>
+        <tr><td>\(B = n\)</td><td>Gradient descent</td><td>Slow iterations, stable, fewer iterations</td></tr>
+      </tbody>
+    </table></div>
+    <p>In the lecture's regression example, small mini-batches behave like SGD with more stability, and larger ones are more stable still, at the cost of slower iterations. Gradient descent shows the strongest and most stable progress per iteration. SGD makes faster iterations, which can mean faster progress per unit of time, but noisily. Mini-batches can achieve the best of both: faster than gradient descent, steadier than SGD.</p>
+  </section>
+
+  <section class="block" id="play">
+    <h2>Try batch sizes</h2>
+    <div class="widget" data-widget="sgd-playground" data-batch="5">
+      <div class="widget-head"><span class="label">Interactive</span><h4>From B = 1 to B = n</h4><p>The same regression problem as in part c. Move the batch-size slider. Then switch the lower chart's x-axis to gradient evaluations, which measures work instead of iterations.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>Per iteration, larger batches always look better. Per gradient evaluation, which is closer to computing time, small batches often get to a good region far sooner, because one gradient-descent iteration costs as much as 40 SGD iterations here.</p>
+  </section>
+
+  <section class="block" id="heart">
+    <h2>Case study: predicting heart disease</h2>
+    <p>A classification problem: predict a heart disease diagnosis from patient attributes.</p>
+    <ul>
+      <li>303 patients, 29 features (demographics such as age, and medical history such as chest pain). 80% for training, 20% for testing.</li>
+      <li>A neural network with one hidden layer of 16 ReLU nodes and a cross-entropy loss.</li>
+      <li>497 parameters: \(29 \times 16 = 464\) weights into the hidden layer, 16 hidden biases, 16 weights to the output, and 1 output bias.</li>
+    </ul>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Step size">
+        <p>As in gradient descent, the step size decides everything. Small steps make limited progress. Large steps converge fast or diverge and oscillate. In between, SGD converges well.</p>
+      </div>
+      <div class="tab-panel" data-tab="Diminishing steps">
+        <p>Large steps at first, to jump to better regions and avoid poor solutions. Small steps later, to improve locally. Getting the schedule right requires experimentation and fine-tuning.</p>
+      </div>
+      <div class="tab-panel" data-tab="Mini-batches">
+        <p>SGD reaches better solutions than gradient descent here, by avoiding local minima. Mini-batching stabilizes the noisy convergence.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="checklist">
+    <h2>Practical checklist</h2>
+    <div class="sheet">
+      <div><b>1 · Initialization</b>A strong starting point speeds up convergence and leads to better solutions. Warm-start from past solves. Try several starts to avoid bad local optima.</div>
+      <div><b>2 · Batching</b>Choose the batch size to trade off the number of iterations against the time per iteration. Possibly increase the batch size over time.</div>
+      <div><b>3 · Step size</b>Both the size and the schedule affect speed and solution quality. Possibly decrease the step over time.</div>
+      <div><b>4 · Termination</b>Stopping early avoids the long tail of slow progress. In machine learning, early stopping also acts as regularization.</div>
+    </div>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Mini-batches average \(B\) stochastic gradients, which reduces noise.</li>
+      <li>\(B = 1\) is SGD, \(B = n\) is gradient descent, and mini-batches sit in between.</li>
+      <li>In practice, tune the initialization, batch size, step-size schedule and stopping rule.</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>Last year's midterm asked whether SGD with mini-batches gives the same solution as plain SGD. It need not: plain SGD's higher variance can escape local minima that a mini-batch method, behaving more like gradient descent, gets stuck in.</p>
+      <p>It also asked to rank gradient descent, Newton's method and SGD on a regression problem. Cost per iteration: SGD cheapest, then gradient descent, then Newton. Number of iterations: SGD most, then gradient descent, then Newton fewest. And to match contour plots: the noisy path is SGD, the direct one Newton, the steady zigzag gradient descent.</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">A dataset has \(n = 1{,}000\) points. Roughly how many mini-batch iterations with \(B = 50\) cost the same number of gradient evaluations as one gradient descent iteration?</div>
+      <div class="opts">
+        <button class="opt">1</button>
+        <button class="opt" data-correct>20</button>
+        <button class="opt">50</button>
+      </div>
+      <div class="feedback">One GD iteration evaluates 1,000 component gradients. Each mini-batch iteration evaluates 50. So 20 mini-batch iterations, one epoch, cost the same.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="convergence.html"><small>Previous · 19c</small>Convergence and step sizes</a>
+    <a class="next" href="./#flashcards"><small>Finish with</small>Flashcards and practice questions</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 19, slides 22 to 31</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

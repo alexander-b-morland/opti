@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class 19 · Stochastic gradient descent · Opti</title>
+<meta name="description" content="Stochastic gradient descent: finite-sum objectives, the algorithm, backpropagation on a small network, convergence with constant and diminishing steps, and mini-batches.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="/">&larr; All classes</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 19 · Non-linear optimization</p>
+  <h1>Stochastic gradient <em>descent</em></h1>
+  <p class="lede">When the objective is an average over millions of data points, follow the gradient of one random point instead. Each step is cheap and noisy. Done right, it is how every large machine learning model is trained.</p>
+</header>
+
+<nav class="chapter-toc" aria-label="On this page"><div class="container">
+  <ol>
+    <li><a href="#big-picture"><span>01</span>Big picture</a></li>
+    <li><a href="#parts"><span>02</span>Parts</a></li>
+    <li><a href="#flashcards"><span>03</span>Flashcards</a></li>
+    <li><a href="#quiz"><span>04</span>Test yourself</a></li>
+  </ol>
+</div></nav>
+
+<main class="container">
+<section class="block" id="big-picture">
+  <span class="section-badge">Overview</span>
+  <h2>The big picture</h2>
+  <p class="lead">Class 18 built gradient descent. It works, but each step needs the gradient over all the data. Class 19 trades exactness for speed: estimate the gradient from one data point, or a small batch, and take many more, cheaper steps.</p>
+  <div class="math-block">\[ \min_x\ f(x) = \frac1n \sum_{i=1}^n f_i(x), \qquad x_{k+1} = x_k - \alpha_k \nabla f_{i_k}(x_k). \]</div>
+  <div class="tabs">
+    <div class="tab-panel" data-tab="Analogy">
+      <p class="analogy">To find out which way public opinion is moving, you could poll the whole country before every decision. Or you could ask one random person each day and adjust a little each time. Any single answer may point the wrong way, but on average the answers point the right way, and you get to make far more adjustments.</p>
+    </div>
+    <div class="tab-panel" data-tab="The trade-off">
+      <p>Gradient descent: few, expensive, reliable steps. SGD: many cheap, noisy steps. With a constant step SGD rushes towards the optimum and then hovers in a "noise ball" around it. Smaller or shrinking steps make the ball smaller. Mini-batches sit in between.</p>
+    </div>
+    <div class="tab-panel" data-tab="Why it matters">
+      <p>Neural networks have millions of parameters and are trained on millions of examples. A single full gradient can cost \(10^{13}\) operations. SGD and its mini-batch versions are what make deep learning feasible, and their randomness helps avoid poor local minima in these non-convex problems.</p>
+    </div>
+  </div>
+
+  <h3>The story of the class in four steps</h3>
+  <div class="flow">
+    <div class="step"><b>19a · Motivation</b><span>Neural networks: finite sums, backprop, expensive gradients.</span></div>
+    <div class="step"><b>19b · Algorithm</b><span>One random gradient per step. Unbiased, not descent.</span></div>
+    <div class="step"><b>19c · Convergence</b><span>Linear phase plus a noise floor. Shrink the step.</span></div>
+    <div class="step"><b>19d · Practice</b><span>Mini-batches, step schedules, starts and stopping.</span></div>
+  </div>
+
+  <div class="callout">
+    <span class="label">Four takeaways from the lecture</span>
+    <ol style="margin:0">
+      <li>SGD introduces randomness to speed up gradient computations and avoid poor solutions, for finite-sum objectives.</li>
+      <li>Its guarantees are weaker than for gradient descent: slower convergence, an irreducible error, or both.</li>
+      <li>Mini-batches are a middle ground between gradient descent (fewer, longer iterations) and SGD (more, faster, more variable iterations).</li>
+      <li>SGD performs very well in practice on large-scale machine learning, especially deep learning.</li>
+    </ol>
+  </div>
+
+  <h3>For your note sheet</h3>
+  <div class="sheet">
+    <div><b>Update</b>\(x_{k+1} = x_k - \alpha_k \nabla f_{i_k}(x_k)\), \(i_k\) uniform.<br>Unbiased: \(\mathbb{E}[\nabla f_{i_k}(x)] = \nabla f(x)\).<br>Not a descent method.</div>
+    <div><b>Strongly convex, constant \(\alpha \le 1/M\)</b>\(\mathbb{E}f(x_k) - z^* \le (1 - \alpha m)^k(f(x_0) - z^*) + \dfrac{\alpha M\sigma^2}{2m}\)</div>
+    <div><b>Smooth, constant \(\alpha\)</b>\(\min_\ell \mathbb{E}\|\nabla f(x_\ell)\|^2 \le \dfrac{f(x_0) - z^*}{k\alpha} + \dfrac{MG^2\alpha}{2}\)<br>\(O(1/k) + O(\alpha)\). Diminishing \(\alpha_k\) removes the floor.</div>
+    <div><b>Mini-batch</b>\(d_k = -\frac1B\sum_{i \in I_k}\nabla f_i(x_k)\).<br>\(B = 1\): SGD. \(B = n\): GD. Cost per iteration \(\propto B\).</div>
+  </div>
+</section>
+
+<section class="block" id="parts">
+  <span class="section-badge">Parts</span>
+  <h2>Explore the class</h2>
+  <div class="subpage-list">
+    <a class="subpage-card" href="why-stochastic.html"><span class="sp-num">19a</span><div><div class="sp-title">Why stochastic gradients</div><div class="sp-desc">Neural networks, training as a finite sum, backpropagation and the cost of a full gradient</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="algorithm.html"><span class="sp-num">19b</span><div><div class="sp-title">The SGD algorithm</div><div class="sp-desc">Random and cyclic sampling, unbiased estimates, lucky and unlucky steps, a network by hand</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="convergence.html"><span class="sp-num">19c</span><div><div class="sp-title">Convergence and step sizes</div><div class="sp-desc">The noise ball, the two theorems, constant versus diminishing steps</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="mini-batches.html"><span class="sp-num">19d</span><div><div class="sp-title">Mini-batches and practice</div><div class="sp-desc">From SGD to GD, the heart disease case, and the practical checklist</div></div><span class="sp-arrow">&rarr;</span></a>
+  </div>
+</section>
+
+<section class="block flashcards-section" id="flashcards">
+  <span class="section-badge">Quick review</span>
+  <h2>Flashcards</h2>
+  <p>Click a card to flip it. Arrow keys move between cards once a card has focus.</p>
+  <div class="flashcards">
+<script type="application/json">
+[
+ {"q": "What structure does SGD require of the objective?", "a": "A finite sum (or expectation) of component functions: \\(f(x) = \\frac1n\\sum_{i=1}^n f_i(x)\\), typically one term per data point."},
+ {"q": "Write the SGD update.", "a": "\\(x_{k+1} = x_k - \\alpha_k \\nabla f_{i_k}(x_k)\\), with \\(i_k\\) chosen at random (or cyclically) from \\(\\{1, \\dots, n\\}\\)."},
+ {"q": "Why is the stochastic gradient unbiased?", "a": "With \\(i_k\\) uniform, \\(\\mathbb{E}[\\nabla f_{i_k}(x)] = \\sum_i \\frac1n \\nabla f_i(x) = \\nabla f(x)\\)."},
+ {"q": "Randomized versus cyclic index rule?", "a": "Randomized: \\(i_k\\) uniform at random, giving unbiased estimates. Cyclic: \\(i_k = 1, 2, \\dots, n, 1, 2, \\dots\\)."},
+ {"q": "Is SGD a descent method?", "a": "No. It can happen that \\(\\nabla f(x_k)^\\top \\nabla f_{i_k}(x_k) &lt; 0\\), so the step increases \\(f\\) however small it is."},
+ {"q": "Cost of one gradient for a neural network?", "a": "Full gradient: \\(O(nm^2)\\) with \\(n\\) data points and \\(m\\) nodes. Stochastic gradient: \\(O(m^2)\\)."},
+ {"q": "What are forward and backward propagation?", "a": "Forward: evaluate the network layer by layer to get the prediction and loss. Backward: apply the chain rule from the output back to get the gradient with respect to every weight."},
+ {"q": "SGD update for linear regression?", "a": "\\(\\beta_j \\leftarrow \\beta_j + \\eta\\, x_{i_k j}(y_{i_k} - x_{i_k}^\\top \\beta)\\): adjust the weights towards one data point."},
+ {"q": "What is the noise ball?", "a": "With a constant step, SGD converges linearly to a neighbourhood of the optimum and then keeps fluctuating inside it, because the stochastic gradients do not vanish at the optimum."},
+ {"q": "State the strongly convex SGD bound.", "a": "\\(\\mathbb{E}f(x_k) - z^* \\le (1 - \\alpha m)^k (f(x_0) - z^*) + \\alpha M\\sigma^2/(2m)\\) for \\(0 &lt; \\alpha \\le 1/M\\)."},
+ {"q": "What does SGD guarantee without convexity, with a constant step?", "a": "\\(\\min_\\ell \\mathbb{E}\\|\\nabla f(x_\\ell)\\|^2 \\le (f(x_0) - z^*)/(k\\alpha) + MG^2\\alpha/2\\), that is \\(O(1/k) + O(\\alpha)\\)."},
+ {"q": "Why use diminishing step sizes?", "a": "They remove the irreducible \\(O(\\alpha)\\) error, so SGD can converge exactly, at the cost of slower convergence. Examples: \\(\\alpha/k\\), \\(\\alpha/\\sqrt{k}\\)."},
+ {"q": "Which iterate should SGD return?", "a": "The best solution visited, not the last one, because the iterates keep fluctuating."},
+ {"q": "What does a mini-batch do?", "a": "Averages \\(B\\) stochastic gradients: \\(d_k = -\\frac1B\\sum_{i \\in I_k}\\nabla f_i(x_k)\\). Less variance, more cost per iteration."},
+ {"q": "Rank GD, Newton and SGD by cost per iteration and number of iterations.", "a": "Cost per iteration: SGD lowest, then GD, then Newton. Number of iterations: SGD most, then GD, then Newton fewest."},
+ {"q": "Name the four practical levers for SGD.", "a": "Initialization (warm starts, several starts), batch size, step-size schedule, and early stopping (which also regularizes)."}
+]
+</script>
+  </div>
+</section>
+
+<section class="block" id="quiz">
+  <span class="section-badge">Exam practice</span>
+  <h2>Test yourself</h2>
+  <p>Multiple choice in the style of the midterm. Say your one-line justification before you click.</p>
+
+  <div class="quiz">
+    <div class="q-label">Question 1 · Descent</div>
+    <div class="q-text">Stochastic gradient descent with a constant step size is a descent algorithm, meaning \(f(x_{k+1}) &lt; f(x_k)\) at every iteration. True or false?</div>
+    <div class="opts">
+      <button class="opt">True</button>
+      <button class="opt" data-correct>False</button>
+    </div>
+    <div class="feedback">The stochastic gradient can point uphill for the full objective, \(\nabla f(x_k)^\top \nabla f_{i_k}(x_k) &lt; 0\), so an iteration can make \(f\) worse.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 2 · Mini-batches</div>
+    <div class="q-text">On \(\min \frac1n \sum_i f_i(x)\) with non-convex \(f_i\), mini-batch SGD and plain SGD (B = 1) are run from the same start. Which is true?</div>
+    <div class="opts">
+      <button class="opt">They always reach the same solution, since both are unbiased.</button>
+      <button class="opt" data-correct>They can reach different solutions.</button>
+      <button class="opt">Mini-batch SGD always reaches a better solution.</button>
+    </div>
+    <div class="feedback">Mini-batches reduce the variance, so the method behaves more like gradient descent and can get stuck in a local minimum that plain SGD, with its higher variance, escapes.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 3 · Ranking</div>
+    <div class="q-text">For least-squares regression on a large dataset, rank the cost of one iteration from cheapest to most expensive.</div>
+    <div class="opts">
+      <button class="opt">Gradient descent, SGD, Newton's method</button>
+      <button class="opt" data-correct>SGD, gradient descent, Newton's method</button>
+      <button class="opt">Newton's method, gradient descent, SGD</button>
+    </div>
+    <div class="feedback">SGD uses one data point. Gradient descent uses all of them. Newton's method also needs the Hessian and a linear system solve.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 4 · Unbiasedness</div>
+    <div class="q-text">Under which index rule is \(\mathbb{E}[\nabla f_{i_k}(x)] = \nabla f(x)\) guaranteed?</div>
+    <div class="opts">
+      <button class="opt" data-correct>Choosing \(i_k\) uniformly at random from \(\{1, \dots, n\}\).</button>
+      <button class="opt">Cycling through \(1, 2, \dots, n\) in order.</button>
+      <button class="opt">Always choosing the data point with the largest loss.</button>
+    </div>
+    <div class="feedback">Uniform sampling gives each \(\nabla f_i\) weight \(1/n\), which reproduces the average. The cyclic rule is deterministic, and choosing the worst point is biased.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 5 · Step size</div>
+    <div class="q-text">SGD with a constant step on a strongly convex problem stalls at an optimality gap of about 0.08. What is the most direct way to lower that floor?</div>
+    <div class="opts">
+      <button class="opt">Run more iterations with the same step.</button>
+      <button class="opt" data-correct>Reduce the step size, or use a diminishing schedule.</button>
+      <button class="opt">Start from a point closer to the optimum.</button>
+    </div>
+    <div class="feedback">The floor \(\alpha M\sigma^2/(2m)\) depends on \(\alpha\) and the gradient noise, not on the number of iterations or the start. A larger batch would also help, by lowering \(\sigma^2\).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 6 · Rates</div>
+    <div class="q-text">With a constant step \(\alpha\), the gradient guarantee for SGD on a smooth (possibly non-convex) function is:</div>
+    <div class="opts">
+      <button class="opt">\(O(1/k)\), the same as gradient descent.</button>
+      <button class="opt" data-correct>\(O(1/k) + O(\alpha)\).</button>
+      <button class="opt">\(O\big((1 - \alpha m)^k\big)\).</button>
+    </div>
+    <div class="feedback">\(\min_\ell \mathbb{E}\|\nabla f(x_\ell)\|^2 \le (f(x_0) - z^*)/(k\alpha) + MG^2\alpha/2\). The second term stays however long you run.</div>
+  </div>
+
+  <p class="quiz-score" aria-live="polite"></p>
+</section>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 19 · Neither course textbook covers SGD. Background on smoothness and strong convexity: Boyd and Vandenberghe 9.1 to 9.3</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

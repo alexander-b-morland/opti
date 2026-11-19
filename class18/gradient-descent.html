@@ -138,7 +138,7 @@
         <tr><td>Sub-linear</td><td>\(p = 1,\ \beta = 1\)</td><td>\(z_k = 1/k\)</td><td>Progress keeps slowing down. Ten times more accuracy costs ten times more iterations.</td></tr>
         <tr><td>Linear</td><td>\(p = 1,\ 0 &lt; \beta &lt; 1\)</td><td>\(z_k = a^k,\ a &lt; 1\)</td><td>The error shrinks by a constant factor each step. A fixed number of correct digits gained per iteration.</td></tr>
         <tr><td>Super-linear</td><td>\(p = 1,\ \beta = 0\)</td><td>\(z_k = (1/k)^k\)</td><td>The shrink factor itself tends to zero. Faster than any linear rate.</td></tr>
-        <tr><td>Quadratic</td><td>\(p = 2\)</td><td>\(z_k = a^{2^k},\ a &lt; 1\)</td><td>The number of correct digits roughly doubles each step. Newton's method, class 19.</td></tr>
+        <tr><td>Quadratic</td><td>\(p = 2\)</td><td>\(z_k = a^{2^k},\ a &lt; 1\)</td><td>The number of correct digits roughly doubles each step. Newton's method, class 20.</td></tr>
       </tbody>
     </table></div>
     <div class="widget" data-widget="rates">
@@ -158,7 +158,7 @@
     </ul>
     <div class="exam-note">
       <span class="label">How this shows up on the exam</span>
-      <p>True or false questions about the descent property are common. Gradient descent with a small enough step: a descent algorithm, true. Newton's method with step size 1 (class 19): not necessarily, it can be attracted to a maximum or overshoot. Stochastic gradient descent with a constant step (class 20): not necessarily, a noisy gradient estimate can increase \(f\).</p>
+      <p>True or false questions about the descent property are common. Gradient descent with a small enough step: a descent algorithm, true. Newton's method with step size 1 (class 20): not necessarily, it can be attracted to a maximum or overshoot. Stochastic gradient descent with a constant step (class 19): not necessarily, a noisy gradient estimate can increase \(f\).</p>
     </div>
   </section>
 
