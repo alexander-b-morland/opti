@@ -94,10 +94,7 @@
         <p>With one variable the rule is \(x_{k+1} = x_k - \alpha f'(x_k)\). If the slope is negative, \(f\) decreases to the right, and \(-\alpha f'(x_k) &gt; 0\) moves you right. If the slope is positive, you move left. The steeper the slope, the bigger the move.</p>
       </div>
       <div class="tab-panel" data-tab="Geometrically">
-        <p>In two or more dimensions the gradient is perpendicular to the level set (contour line) through \(x_k\). Gradient descent therefore always steps straight across the contour lines, in the downhill direction. That is the locally steepest way down, but not necessarily the most direct route to the minimum. Part d shows how this causes zigzagging.</p>
-      </div>
-      <div class="tab-panel" data-tab="Why steepest?">
-        <p>Among all directions of length one, which decreases \(f\) fastest to first order? We want to minimize \(\nabla f(x)^\top v\) subject to \(\|v\|_2 = 1\). By the Cauchy-Schwarz inequality, \(\nabla f(x)^\top v \ge -\|\nabla f(x)\|\), with equality for \(v = -\nabla f(x)/\|\nabla f(x)\|\). So the negative gradient is the direction of steepest descent in the Euclidean norm. Other norms give other methods (part d).</p>
+        <p>In two or more dimensions the gradient is perpendicular to the level set (contour line) through \(x_k\). Gradient descent therefore always steps straight across the contour lines, in the downhill direction. That is the locally steepest way down, but not necessarily the most direct route to the minimum.</p>
       </div>
     </div>
   </section>
@@ -152,7 +149,7 @@
     <h2>Summary</h2>
     <ul>
       <li>Descent methods move along a direction with \(\nabla f(x_k)^\top d_k &lt; 0\) and make progress if the step is small enough.</li>
-      <li>Gradient descent uses \(d_k = -\nabla f(x_k)\), the steepest descent direction in the Euclidean norm. It produces a monotonically decreasing sequence of values for small enough steps.</li>
+      <li>Gradient descent uses \(d_k = -\nabla f(x_k)\), the opposite of the local slope. It produces a monotonically decreasing sequence of values for small enough steps.</li>
       <li>It converges to a stationary point under assumptions, and to a global minimum if \(f\) is convex. Otherwise the starting point matters.</li>
       <li>Speed is measured by the order and rate of convergence: sub-linear, linear, super-linear, quadratic.</li>
     </ul>

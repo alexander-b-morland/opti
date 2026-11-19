@@ -67,11 +67,6 @@
       <li>The second term does not go to zero. It is the size of the noise ball, and it is proportional to the step size \(\alpha\) and to the gradient noise \(\sigma^2\).</li>
       <li>So a smaller step gives a smaller noise ball but a slower first phase. That is the central trade-off of SGD.</li>
     </ul>
-    <details class="more"><summary>Proof sketch (optional in the lecture)</summary><div>
-      <p><strong>1.</strong> Smoothness and the bounded variance give, in expectation, \(\mathbb{E}f(x_{k+1}) - z^* \le \mathbb{E}f(x_k) - z^* - \tfrac{\alpha}{2}\mathbb{E}\|\nabla f(x_k)\|^2 + \tfrac{M\alpha^2\sigma^2}{2}\) for \(\alpha \le 1/M\).</p>
-      <p><strong>2.</strong> Strong convexity gives \(\|\nabla f(x_k)\|^2 \ge 2m(f(x_k) - z^*)\), exactly as in class 18.</p>
-      <p><strong>3.</strong> Combine: \(\mathbb{E}f(x_{k+1}) - z^* \le (1 - \alpha m)(\mathbb{E}f(x_k) - z^*) + \tfrac{M\alpha^2\sigma^2}{2}\). Unroll the recursion and bound the geometric sum \(\sum_\ell (1 - \alpha m)^\ell \le 1/(\alpha m)\).</p>
-    </div></details>
   </section>
 
   <section class="block" id="theorem2">
@@ -92,7 +87,7 @@
         <p>Converges to an approximate solution: fast at first, then stuck in a noise ball whose size grows with \(\alpha\).</p>
       </div>
       <div class="tab-panel" data-tab="Diminishing">
-        <p>Steps such as \(\alpha_k = \alpha/k\) or \(\alpha_k = \alpha/\sqrt{k}\). In the gradient bound, \(\sum_\ell \alpha_\ell^2 / \sum_\ell \alpha_\ell \to 0\) when the steps shrink but their sum diverges (the same condition as in class 18). So SGD can converge to an exact solution, at the cost of slower convergence.</p>
+        <p>Steps such as \(\alpha_k = \alpha/k\) or \(\alpha_k = \alpha/\sqrt{k}\). With these steps, SGD can converge to an exact solution, at the cost of slower convergence. Diminishing step sizes have shown strong practical performance.</p>
       </div>
       <div class="tab-panel" data-tab="In practice">
         <p>Large steps early, to jump to better regions and avoid poor solutions. Small steps later, to refine locally. Diminishing schedules perform well in practice, but finding a good schedule takes experimentation.</p>
@@ -143,7 +138,7 @@
 </main>
 
 <footer class="site-foot"><div class="container">
-  <span>Sources: 15.C57 Lecture 19, slides 18 to 21 and appendix · Background on smoothness and strong convexity: Boyd and Vandenberghe 9.1.2</span>
+  <span>Sources: 15.C57 Lecture 19, slides 18 to 21 · Background on smoothness and strong convexity: Boyd and Vandenberghe 9.1.2</span>
   <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
 </div></footer>
 </body>

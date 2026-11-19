@@ -354,10 +354,10 @@
   function iterations(w) {
     var b = body(w);
     b.innerHTML = '<div class="controls">' +
-      '<label>Condition number κ = M/m <input type="range" class="ka" min="0" max="3" step="0.01" value="1"><output class="kao"></output></label>' +
+      '<label>Ratio M/m <input type="range" class="ka" min="0" max="3" step="0.01" value="1"><output class="kao"></output></label>' +
       '<label>Tolerance ε <input type="range" class="ep" min="1" max="8" step="1" value="4"><output class="epo"></output></label></div>' +
       '<canvas aria-label="Guaranteed optimality gap versus iteration"></canvas>' +
-      '<div class="stats"><div><b>shrink factor 1 − 1/κ</b><span class="c"></span></div><div><b>strongly convex: iterations</b><span class="kl"></span></div><div><b>only convex: iterations</b><span class="ks"></span></div></div>' +
+      '<div class="stats"><div><b>shrink factor 1 − m/M</b><span class="c"></span></div><div><b>strongly convex: iterations</b><span class="kl"></span></div><div><b>only convex: iterations</b><span class="ks"></span></div></div>' +
       '<p class="muted" style="font-family:var(--sans);font-size:14px;margin:10px 0 0">Normalised so that the starting gap f(x₀) − z* and the convex bound constant M‖x₀ − x*‖²/2 both equal 1. The numbers are the worst-case guarantees from the two theorems, with step size 1/M.</p>';
     var canvas = b.querySelector("canvas"), ka = b.querySelector(".ka"), ep = b.querySelector(".ep");
     [ka, ep].forEach(function (s) { s.addEventListener("input", function () { draw(); }); });
@@ -398,61 +398,50 @@
   /* =========================================================
      7. Gradient descent playground in two dimensions
      ========================================================= */
-  function quad(Q, c, k0) {
-    return {
-      quad: true, Q: Q,
-      f: function (x, y) { return 0.5 * (Q[0][0] * x * x + 2 * Q[0][1] * x * y + Q[1][1] * y * y) - c[0] * x - c[1] * y + k0; },
-      g: function (x, y) { return [Q[0][0] * x + Q[0][1] * y - c[0], Q[0][1] * x + Q[1][1] * y - c[1]]; }
-    };
-  }
   var FUNCS = {
-    good: Object.assign(quad([[20, 5], [5, 16]], [25, 21], 10), { name: "Well-conditioned quadratic", star: [1, 1], view: [1, 1, 6], start: [-1.6, 2.6], alpha: 0.05,
-      note: "Q = [[20, 5], [5, 16]], condition number 1.85. Level sets are nearly circles, so the negative gradient points almost straight at the minimum." }),
-    bad: Object.assign(quad([[20, 5], [5, 2]], [25, 7], 10), { name: "Ill-conditioned quadratic", star: [1, 1], view: [1, 1, 6], start: [-1.6, 2.6], alpha: 0.05,
-      note: "Q = [[20, 5], [5, 2]], condition number 30.2. Long thin ellipses: the gradient points across the valley, not along it, so the iterates zigzag." }),
-    lec: Object.assign(quad([[10, 4], [4, 2]], [14, 6], 20), { name: "Lecture example", star: [1, 1], view: [1, 1, 7], start: [2.7, 2.5], alpha: 0.1,
-      note: "f = 5x₁² + x₂² + 4x₁x₂ − 14x₁ − 6x₂ + 20, minimum f(1, 1) = 10. Compare exact line search with a constant step of 0.1." }),
-    scale: Object.assign(quad([[1000, 20], [20, 1]], [0, 0], 0), { name: "Badly scaled", star: [0, 0], view: [0, 0, 8], start: [0.06, 2.2], alpha: 0.0019,
-      note: "f = 500x₁² + 20x₁x₂ + 0.5x₂², condition number about 1,668. Turn on diagonal scaling to see the fix." }),
-    rosen: { name: "Rosenbrock (banana)", star: [1, 1], view: [0, 1, 4.4], start: [-1.2, 1], alpha: 0.001,
-      f: function (x, y) { return 100 * (y - x * x) * (y - x * x) + (1 - x) * (1 - x); },
-      g: function (x, y) { return [-400 * x * (y - x * x) - 2 * (1 - x), 200 * (y - x * x)]; },
-      note: "f = 100(x₂ − x₁²)² + (1 − x₁)². Not convex. Reaching the valley is fast, crawling along the curved valley floor to (1, 1) is slow." },
-    wells: { name: "Two valleys (non-convex)", star: [-1.04, 0], view: [0, 0, 4.6], start: [1.6, 1.1], alpha: 0.05,
+    bowl: { name: "Convex bowl", star: [1, 1], view: [1, 1, 7], start: [-1.2, 3.0], steps: [0.02, 0.2, 0.46],
+      f: function (x, y) { return 0.5 * (3 * x * x + 3.2 * x * y + 2 * y * y) - 4.6 * x - 3.6 * y; },
+      g: function (x, y) { return [3 * x + 1.6 * y - 4.6, 1.6 * x + 2 * y - 3.6]; },
+      note: "A convex quadratic with its minimum at (1, 1). Every start reaches the same point. Only the speed depends on the step size." },
+    wells: { name: "Two valleys (non-convex)", star: [-1.04, 0], view: [0, 0, 4.6], start: [1.6, 1.1], steps: [0.01, 0.05, 0.15],
       f: function (x, y) { return (x * x - 1) * (x * x - 1) + 0.8 * y * y + 0.3 * x; },
       g: function (x, y) { return [4 * x * (x * x - 1) + 0.3, 1.6 * y]; },
       note: "f = (x₁² − 1)² + 0.8x₂² + 0.3x₁ has a global minimum on the left and a worse local minimum on the right. Click different start points." }
   };
 
   function playground(w) {
-    var allowed = (w.getAttribute("data-fns") || "good,bad,lec,scale,rosen,wells").split(",");
+    var allowed = (w.getAttribute("data-fns") || "bowl,wells").split(",");
     var fn = w.getAttribute("data-fn") || allowed[0];
-    var rule = w.getAttribute("data-rule") || "const";
+    var preset = w.getAttribute("data-step") || "s";
     var b = body(w);
     b.innerHTML = '<canvas aria-label="Contour plot with gradient descent iterates. Click to choose a start point."></canvas>' +
       '<div class="controls">' + (allowed.length > 1 ? '<select class="fnsel" aria-label="Function">' + allowed.map(function (k) { return '<option value="' + k + '">' + FUNCS[k].name + "</option>"; }).join("") + "</select>" : "") +
-      seg([["const", "Constant step"], ["back", "Backtracking"], ["exact", "Exact line search"]], rule) + "</div>" +
-      '<div class="controls"><label class="alpha-wrap">Step size α <input type="range" class="al" min="-4" max="0" step="0.01"><output class="alo"></output></label>' +
-      '<label class="scale-wrap"><input type="checkbox" class="sc"> Diagonal scaling D = diag(1/Q₁₁, 1/Q₂₂)</label>' +
+      seg([["s", "Small step"], ["m", "Medium step"], ["l", "Large step"]], preset) + "</div>" +
+      '<div class="controls"><label class="alpha-wrap">Step size α <input type="range" class="al" min="-3" max="0" step="0.01"><output class="alo"></output></label>' +
       '<button type="button" class="btn run">Run</button><button type="button" class="btn ghost reset">Reset</button></div>' +
       '<div class="stats"><div><b>iterations</b><span class="it"></span></div><div><b>f(xₖ)</b><span class="fv"></span></div><div><b>‖∇f(xₖ)‖</b><span class="gn"></span></div><div><b>status</b><span class="st"></span></div></div>' +
       '<p class="note muted" style="font-family:var(--sans);font-size:14px;margin:10px 0 0"></p>';
     var canvas = b.querySelector("canvas");
-    var al = b.querySelector(".al"), sc = b.querySelector(".sc"), sel = b.querySelector(".fnsel");
+    var al = b.querySelector(".al"), sel = b.querySelector(".fnsel"), segEl = b.querySelector(".seg");
     var start = FUNCS[fn].start.slice(), path = [], shown = 0, anim = null, status = "", layer = null, layerKey = "";
     var view;
+    function applyPreset() {
+      al.value = Math.log10(FUNCS[fn].steps[{ s: 0, m: 1, l: 2 }[preset]]);
+      segEl.querySelectorAll("button").forEach(function (x) { x.classList.toggle("on", x.getAttribute("data-v") === preset); });
+      updateAlphaUi();
+    }
     function setFn(k) {
       fn = k; start = FUNCS[k].start.slice();
-      al.value = Math.log10(FUNCS[k].alpha);
-      sc.checked = false; sc.disabled = !FUNCS[k].quad;
-      b.querySelector(".scale-wrap").style.opacity = FUNCS[k].quad ? 1 : 0.45;
+      applyPreset();
       b.querySelector(".note").textContent = FUNCS[k].note;
       layer = null; compute(); run();
     }
     if (sel) { sel.value = fn; sel.addEventListener("change", function () { setFn(sel.value); }); }
-    bindSeg(b.querySelector(".seg"), function (v) { rule = v; updateAlphaUi(); compute(); run(); });
-    al.addEventListener("input", function () { updateAlphaUi(); compute(); run(); });
-    sc.addEventListener("change", function () { compute(); run(); });
+    bindSeg(segEl, function (v) { preset = v; applyPreset(); compute(); run(); });
+    al.addEventListener("input", function () {
+      segEl.querySelectorAll("button").forEach(function (x) { x.classList.remove("on"); });
+      updateAlphaUi(); compute(); run();
+    });
     b.querySelector(".run").addEventListener("click", function () { run(); });
     b.querySelector(".reset").addEventListener("click", function () { start = FUNCS[fn].start.slice(); compute(); run(); });
     canvas.addEventListener("click", function (e) {
@@ -462,52 +451,21 @@
       compute(); run();
     });
     function updateAlphaUi() {
-      b.querySelector(".alpha-wrap").style.opacity = rule === "const" ? 1 : 0.45;
-      al.disabled = rule !== "const";
-      b.querySelector(".alo").textContent = P.fmt(Math.pow(10, parseFloat(al.value)), 4);
-    }
-    function dirOf(F, x, y, D) {
-      var g = F.g(x, y);
-      return D ? [-D[0] * g[0], -D[1] * g[1]] : [-g[0], -g[1]];
+      b.querySelector(".alo").textContent = P.fmt(Math.pow(10, parseFloat(al.value)), 3);
     }
     function compute() {
       var F = FUNCS[fn], x = start[0], y = start[1];
-      var D = sc.checked && F.quad ? [1 / F.Q[0][0], 1 / F.Q[1][1]] : null;
       var alpha = Math.pow(10, parseFloat(al.value));
       path = [[x, y]]; status = "";
       var maxIt = 20000, tol = 1e-4;
       for (var k = 0; k < maxIt; k++) {
-        var g = F.g(x, y), gn = Math.hypot(g[0], g[1]);
-        if (gn < tol) { status = "converged"; break; }
-        var d = dirOf(F, x, y, D), slope = g[0] * d[0] + g[1] * d[1], t;
-        if (rule === "const") t = alpha;
-        else if (rule === "back") {
-          t = 1; var f0 = F.f(x, y), sigma = 0.3, beta = 0.5, guard = 0;
-          while (F.f(x + t * d[0], y + t * d[1]) > f0 + sigma * t * slope && guard++ < 60) t *= beta;
-        } else {
-          if (F.quad) {
-            var Q = F.Q, Qd0 = Q[0][0] * d[0] + Q[0][1] * d[1], Qd1 = Q[0][1] * d[0] + Q[1][1] * d[1];
-            t = -slope / (d[0] * Qd0 + d[1] * Qd1);
-          } else t = lineMin(F, x, y, d);
-        }
-        x += t * d[0]; y += t * d[1];
+        var g = F.g(x, y);
+        if (Math.hypot(g[0], g[1]) < tol) { status = "converged"; break; }
+        x -= alpha * g[0]; y -= alpha * g[1];
         path.push([x, y]);
         if (!isFinite(x) || !isFinite(y) || Math.abs(x) > 1e6 || Math.abs(y) > 1e6) { status = "diverged"; break; }
       }
       if (!status) status = "max iterations";
-    }
-    function lineMin(F, x, y, d) {
-      var phi = function (t) { return F.f(x + t * d[0], y + t * d[1]); };
-      var hi = 1e-4, f0 = phi(0);
-      while (phi(hi * 2) < phi(hi) && hi < 1e4) hi *= 2;
-      if (phi(hi) > f0) { while (phi(hi) > f0 && hi > 1e-12) hi /= 2; }
-      var a = 0, c = hi * 2, gr = (Math.sqrt(5) - 1) / 2;
-      var x1 = c - gr * (c - a), x2 = a + gr * (c - a), f1 = phi(x1), f2 = phi(x2);
-      for (var i = 0; i < 80; i++) {
-        if (f1 < f2) { c = x2; x2 = x1; f2 = f1; x1 = c - gr * (c - a); f1 = phi(x1); }
-        else { a = x1; x1 = x2; f1 = f2; x2 = a + gr * (c - a); f2 = phi(x2); }
-      }
-      return (a + c) / 2;
     }
     function run() {
       if (anim) cancelAnimationFrame(anim);
@@ -530,7 +488,7 @@
       view = new P.View(s.w, s.h, cx - span / 2, cx + span / 2, cy - hy / 2, cy + hy / 2, 0);
       var key = fn + "|" + s.w + "|" + document.documentElement.getAttribute("data-theme") + "|" + pal.accent;
       if (!layer || layerKey !== key || resized) {
-        layer = P.contourLayer(s.w, s.h, s.dpr, view, F.f, pal, { nx: 150, levels: 18, lowFrac: fn === "rosen" ? 1e-5 : fn === "scale" ? 1e-6 : 2e-4 });
+        layer = P.contourLayer(s.w, s.h, s.dpr, view, F.f, pal, { nx: 150, levels: 18, lowFrac: 2e-4 });
         layerKey = key;
       }
       ctx.drawImage(layer, 0, 0, s.w, s.h);
@@ -560,71 +518,14 @@
       b.querySelector(".gn").textContent = P.fmt(Math.hypot(g[0], g[1]), 3);
       b.querySelector(".st").textContent = done ? status : "running";
     }
-    updateAlphaUi();
-    al.value = Math.log10(FUNCS[fn].alpha); updateAlphaUi();
-    sc.disabled = !FUNCS[fn].quad;
-    b.querySelector(".scale-wrap").style.opacity = FUNCS[fn].quad ? 1 : 0.45;
-    if (w.hasAttribute("data-noscale")) b.querySelector(".scale-wrap").style.display = "none";
+    applyPreset();
     b.querySelector(".note").textContent = FUNCS[fn].note;
     compute(); shown = path.length;
     P.responsive(canvas, function (resized) { draw(resized); });
     run();
   }
 
-  /* =========================================================
-     8. Steepest descent in different norms
-     ========================================================= */
-  function steepest(w) {
-    var norm = "two";
-    var P = [4, 1]; // P = diag(4, 1)
-    var b = body(w);
-    b.innerHTML = '<canvas aria-label="Unit ball and steepest descent direction"></canvas>' +
-      '<div class="controls">' + seg([["two", "2-norm"], ["one", "1-norm"], ["P", "P-norm, P = diag(4, 1)"]], norm) +
-      '<label>Gradient angle <input type="range" class="ang" min="0" max="360" step="1" value="35"><output class="ango"></output></label></div>' +
-      '<div class="verdict"></div>';
-    var canvas = b.querySelector("canvas"), ang = b.querySelector(".ang");
-    bindSeg(b.querySelector(".seg"), function (v) { norm = v; draw(); });
-    ang.addEventListener("input", function () { draw(); });
-    function draw() {
-      var th = parseFloat(ang.value) * Math.PI / 180, g = [Math.cos(th), Math.sin(th)];
-      b.querySelector(".ango").textContent = ang.value + "°";
-      var s = Plot.setup(canvas, 0.62), pal = Plot.palette(), ctx = s.ctx;
-      var span = 4.2, v = new Plot.View(s.w, s.h, -span / 2, span / 2, -span * 0.31, span * 0.31, 0);
-      Plot.clear(ctx, s.w, s.h, pal.bg); Plot.axes(ctx, v, pal, { gx: 0.5, gy: 0.5 });
-      // unit ball
-      ctx.save(); ctx.fillStyle = pal.soft; ctx.strokeStyle = pal.accent; ctx.lineWidth = 2; ctx.beginPath();
-      for (var i = 0; i <= 360; i++) {
-        var a = i * Math.PI / 180, x, y;
-        if (norm === "two") { x = Math.cos(a); y = Math.sin(a); }
-        else if (norm === "P") { x = Math.cos(a) / Math.sqrt(P[0]); y = Math.sin(a) / Math.sqrt(P[1]); }
-        else { var c = Math.cos(a), sn = Math.sin(a), r = 1 / (Math.abs(c) + Math.abs(sn)); x = r * c; y = r * sn; }
-        i ? ctx.lineTo(v.px(x), v.py(y)) : ctx.moveTo(v.px(x), v.py(y));
-      }
-      ctx.closePath(); ctx.fill(); ctx.stroke(); ctx.restore();
-      // steepest direction
-      var d;
-      if (norm === "two") d = [-g[0], -g[1]];
-      else if (norm === "P") { var q = [g[0] / P[0], g[1] / P[1]], nrm = Math.sqrt(g[0] * q[0] + g[1] * q[1]); d = [-q[0] / nrm, -q[1] / nrm]; }
-      else { d = Math.abs(g[0]) >= Math.abs(g[1]) ? [-Math.sign(g[0]), 0] : [0, -Math.sign(g[1])]; }
-      var val = g[0] * d[0] + g[1] * d[1];
-      // supporting line g^T v = val, perpendicular to g
-      ctx.save(); ctx.setLineDash([6, 4]); ctx.strokeStyle = pal.ink3; ctx.lineWidth = 1.2;
-      var px0 = val * g[0], py0 = val * g[1], tx = -g[1], ty = g[0];
-      Plot.line(ctx, v.px(px0 - 3 * tx), v.py(py0 - 3 * ty), v.px(px0 + 3 * tx), v.py(py0 + 3 * ty)); ctx.restore();
-      Plot.arrow(ctx, v.px(0), v.py(0), v.px(1.25 * g[0]), v.py(1.25 * g[1]), pal.gold, 2.2);
-      Plot.text(ctx, "∇f", v.px(1.38 * g[0]), v.py(1.38 * g[1]), pal.gold, 14, "center");
-      Plot.arrow(ctx, v.px(0), v.py(0), v.px(d[0]), v.py(d[1]), pal.red, 2.6);
-      Plot.text(ctx, "d", v.px(d[0] * 1.15) + 4, v.py(d[1] * 1.15), pal.red, 14, "center");
-      var vd = b.querySelector(".verdict");
-      var names = { two: "The steepest unit step points exactly against the gradient: ordinary gradient descent.",
-        P: "The ball is squeezed along x₁, so the best direction tilts towards x₂. It equals −P⁻¹∇f, rescaled: scaled gradient descent with D = P⁻¹.",
-        one: "The 1-norm ball is a diamond, so the best point is always a corner. Only the coordinate with the largest partial derivative moves: coordinate descent." };
-      vd.className = "verdict"; vd.textContent = names[norm] + " First-order decrease ∇fᵀd = " + Plot.fmt(val, 3) + ".";
-    }
-    Plot.responsive(canvas, draw);
-  }
-
-  var REG = { steepest: steepest, "stationary-1d": stationary1d, "hessian-2d": hessian2d, "gd-1d": gd1d, rates: rates, sandwich: sandwich, iterations: iterations, playground: playground };
+  var REG = { "stationary-1d": stationary1d, "hessian-2d": hessian2d, "gd-1d": gd1d, rates: rates, sandwich: sandwich, iterations: iterations, playground: playground };
   document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".widget[data-widget]").forEach(function (w) {
       var fn = REG[w.getAttribute("data-widget")];

@@ -69,7 +69,7 @@
 
   <section class="block" id="sandwich">
     <h2>The quadratic sandwich</h2>
-    <p>The two definitions translate into the two inequalities that the proofs actually use (the lecture proves both in its appendix):</p>
+    <p>The lecture states what the two definitions imply. These are the two inequalities the convergence proof uses:</p>
     <div class="box theorem">
       <span class="label">Upper bound from \(M\)-smoothness</span>
       <div class="math-block">\[ f(y) \le f(x) + \nabla f(x)^\top (y - x) + \frac{M}{2}\|y - x\|^2 \quad \text{for all } x, y. \]</div>
@@ -100,13 +100,6 @@
       <li>To guarantee \(f(x_k) - z^* \le \varepsilon\), it is enough to run \(k \ge \dfrac{\|x_0 - x^*\|^2}{2\alpha\varepsilon}\) iterations, that is \(O(1/\varepsilon)\).</li>
       <li>A poor start (large \(\|x_0 - x^*\|\)) and a tight tolerance (small \(\varepsilon\)) both cost iterations in direct proportion.</li>
     </ul>
-    <details class="more"><summary>Proof (from the lecture appendix)</summary><div>
-      <p><strong>1. One step makes progress.</strong> Use the smoothness bound with \(y = x_{k+1} = x_k - \alpha\nabla f(x_k)\) and \(\alpha = 1/M\):</p>
-      <div class="math-block">\[ f(x_{k+1}) \le f(x_k) - \frac{\alpha}{2}\|\nabla f(x_k)\|^2. \]</div>
-      <p><strong>2. Compare with the optimum.</strong> Convexity gives \(f(x^*) \ge f(x_k) + \nabla f(x_k)^\top (x^* - x_k)\). Combine with step 1 and use \(\nabla f(x_k) = (x_k - x_{k+1})/\alpha\). After expanding the squares:</p>
-      <div class="math-block">\[ f(x_{k+1}) - z^* \le \frac{1}{2\alpha}\left( \|x_k - x^*\|^2 - \|x_{k+1} - x^*\|^2 \right). \]</div>
-      <p><strong>3. Telescope.</strong> Sum over \(i = 1, \dots, k\). The right side collapses to at most \(\tfrac{1}{2\alpha}\|x_0 - x^*\|^2\). Since the values decrease monotonically, the left sum is at least \(k(f(x_k) - z^*)\). Divide by \(k\).</p>
-    </div></details>
   </section>
 
   <section class="block" id="strong">
@@ -148,9 +141,9 @@
 
   <section class="block" id="kappa">
     <h2>What drives the speed</h2>
-    <p>The ratio \(\kappa = M/m\) is the <strong>condition number</strong> of \(f\). It measures how different the curvature is across directions. \(\kappa = 1\) means a perfectly round bowl. Large \(\kappa\) means a long, narrow valley.</p>
+    <p>In the linear rate, the function enters only through the ratio \(M/m\) of the largest to the smallest curvature. \(M/m = 1\) means equal curvature in every direction, and then \(c = 0\). A large \(M/m\) puts \(c = 1 - m/M\) close to 1, and each step removes only a small share of the gap.</p>
     <div class="widget" data-widget="iterations">
-      <div class="widget-head"><span class="label">Interactive</span><h4>How many iterations does the guarantee promise?</h4><p>Change the condition number and the tolerance. Compare the strongly convex guarantee with the convex-only one.</p></div>
+      <div class="widget-head"><span class="label">Interactive</span><h4>How many iterations does the guarantee promise?</h4><p>Change the ratio \(M/m\) and the tolerance. Compare the strongly convex guarantee with the convex-only one.</p></div>
       <div class="widget-body"></div>
     </div>
     <p>The lecture lists four drivers of performance:</p>
@@ -158,12 +151,12 @@
       <thead><tr><th>Driver</th><th>Effect</th></tr></thead>
       <tbody>
         <tr><td>Initial point \(x_0\)</td><td>The further from \(x^*\), the more iterations. Enters through \(\|x_0 - x^*\|^2\) or \(f(x_0) - z^*\).</td></tr>
-        <tr><td>Step size \(\alpha\)</td><td>Larger is faster, but only up to a point. Beyond about \(2/M\) the method can diverge. Part d.</td></tr>
+        <tr><td>Step size \(\alpha\)</td><td>Larger is faster, but not too large: the "right" choice of \(\alpha\) is what makes convergence work. Part d.</td></tr>
         <tr><td>Tolerance \(\varepsilon\)</td><td>Smaller is slower: \(1/\varepsilon\) in the convex case, \(\log(1/\varepsilon)\) in the strongly convex case.</td></tr>
-        <tr><td>The function \(f\)</td><td>Through \(c = 1 - m/M = 1 - 1/\kappa\). Ill-conditioned problems converge slowly.</td></tr>
+        <tr><td>The function \(f\)</td><td>Through \(c = 1 - m/M\). A large ratio \(M/m\) means slow convergence.</td></tr>
       </tbody>
     </table></div>
-    <p>Ridge regression illustrates the last row. The Hessian is \(X^\top X + \lambda I\), so \(m = \lambda_{\min}(X^\top X) + \lambda\) and \(M = \lambda_{\max}(X^\top X) + \lambda\). Increasing \(\lambda\) raises both by the same amount, which pushes \(M/m\) towards 1. More regularization makes the problem better conditioned, and gradient descent faster.</p>
+    <p>Ridge regression illustrates the last row. The Hessian is \(X^\top X + \lambda I\), so \(m = \lambda_{\min}(X^\top X) + \lambda\) and \(M = \lambda_{\max}(X^\top X) + \lambda\). Increasing \(\lambda\) raises both by the same amount, which pushes \(M/m\) towards 1. More regularization lowers \(c\), and gradient descent gets faster.</p>
   </section>
 
   <section class="block" id="summary">
@@ -172,7 +165,7 @@
       <li>\(M\)-smooth: curvature at most \(M\), quadratic upper bound. \(m\)-strongly convex: curvature at least \(m\), quadratic lower bound.</li>
       <li>Step size \(1/M\) minimizes the upper bound at each step.</li>
       <li>Convex and \(M\)-smooth: \(f(x_k) - z^* \le M\|x_0 - x^*\|^2/(2k)\). Sub-linear, \(O(1/\varepsilon)\).</li>
-      <li>Also \(m\)-strongly convex: \(f(x_k) - z^* \le (1 - m/M)^k (f(x_0) - z^*)\). Linear, \(O(\kappa\log(1/\varepsilon))\).</li>
+      <li>Also \(m\)-strongly convex: \(f(x_k) - z^* \le (1 - m/M)^k (f(x_0) - z^*)\). Linear, \(O\big(\tfrac{M}{m}\log(1/\varepsilon)\big)\).</li>
     </ul>
     <div class="exam-note">
       <span class="label">How this shows up on the exam</span>
@@ -191,7 +184,7 @@
         <button class="opt" data-correct>\(M = 16,\ m = 4\)</button>
         <button class="opt">\(M = 16,\ m = 0\)</button>
       </div>
-      <div class="feedback">The Hessian is \(\mathrm{diag}(4, 16)\), so the curvature ranges from 4 to 16. Careful with the factor 2: \(\partial^2 (2x_1^2)/\partial x_1^2 = 4\). The condition number is 4.</div>
+      <div class="feedback">The Hessian is \(\mathrm{diag}(4, 16)\), so the curvature ranges from 4 to 16. Careful with the factor 2: \(\partial^2 (2x_1^2)/\partial x_1^2 = 4\). So \(M/m = 4\).</div>
     </div>
     <div class="quiz">
       <div class="q-label">Quick check</div>
@@ -201,18 +194,18 @@
         <button class="opt">About 10</button>
         <button class="opt" data-correct>About 100</button>
       </div>
-      <div class="feedback">\((1 - 1/100)^k \approx e^{-k/100}\), so \(k \approx 100 = \kappa\) iterations per factor of \(e\). This is where \(O(\kappa \log(1/\varepsilon))\) comes from.</div>
+      <div class="feedback">\((1 - 1/100)^k \approx e^{-k/100}\), so \(k \approx 100 = M/m\) iterations per factor of \(e\). This is where \(O\big(\tfrac{M}{m} \log(1/\varepsilon)\big)\) comes from.</div>
     </div>
   </section>
 
   <nav class="part-nav">
     <a href="gradient-descent.html"><small>Previous · 18b</small>The gradient descent algorithm</a>
-    <a class="next" href="step-sizes.html"><small>Next · 18d</small>Step sizes, initialization and scaling</a>
+    <a class="next" href="step-sizes.html"><small>Next · 18d</small>Step sizes and initialization</a>
   </nav>
 </main>
 
 <footer class="site-foot"><div class="container">
-  <span>Sources: 15.C57 Lecture 18, slides 18 to 21 and appendix · Boyd and Vandenberghe 9.1.2 and 9.3</span>
+  <span>Sources: 15.C57 Lecture 18, slides 18 to 21 · Boyd and Vandenberghe 9.1.2 and 9.3</span>
   <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
 </div></footer>
 </body>

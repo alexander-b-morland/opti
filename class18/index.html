@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Class 18 · Gradient descent · Opti</title>
-<meta name="description" content="Unconstrained minimization and gradient descent: optimality conditions, the algorithm, convergence rates, step sizes and scaling. With interactive visuals, flashcards and exam-style questions.">
+<meta name="description" content="Unconstrained minimization and gradient descent: optimality conditions, the algorithm, convergence rates, step sizes and starting points. With interactive visuals, flashcards and exam-style questions.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -68,7 +68,7 @@
     <div class="step"><b>18a · Target</b><span>What does a minimum look like? Gradient and Hessian conditions.</span></div>
     <div class="step"><b>18b · Method</b><span>Walk against the gradient. How to measure speed.</span></div>
     <div class="step"><b>18c · Guarantee</b><span>Under smoothness and convexity, how fast it converges.</span></div>
-    <div class="step"><b>18d · Practice</b><span>Step sizes, starting points, conditioning and scaling.</span></div>
+    <div class="step"><b>18d · Practice</b><span>Step sizes and starting points, alone and together.</span></div>
   </div>
 
   <div class="callout">
@@ -98,7 +98,7 @@
     <a class="subpage-card" href="optimality-conditions.html"><span class="sp-num">18a</span><div><div class="sp-title">Optimality conditions</div><div class="sp-desc">Stationary points, the Hessian test, saddle points, and why convexity makes life easy</div></div><span class="sp-arrow">&rarr;</span></a>
     <a class="subpage-card" href="gradient-descent.html"><span class="sp-num">18b</span><div><div class="sp-title">The gradient descent algorithm</div><div class="sp-desc">Descent directions, the update rule step by step, and how to measure convergence speed</div></div><span class="sp-arrow">&rarr;</span></a>
     <a class="subpage-card" href="convergence.html"><span class="sp-num">18c</span><div><div class="sp-title">Convergence guarantees</div><div class="sp-desc">Smoothness, strong convexity, the two rate theorems and the proof you should know</div></div><span class="sp-arrow">&rarr;</span></a>
-    <a class="subpage-card" href="step-sizes.html"><span class="sp-num">18d</span><div><div class="sp-title">Step sizes, initialization and scaling</div><div class="sp-desc">Line search, the condition number, zigzagging, diagonal scaling and steepest descent</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="step-sizes.html"><span class="sp-num">18d</span><div><div class="sp-title">Step sizes and initialization</div><div class="sp-desc">Small, medium and large steps, local minima, several starts, and tuning both together</div></div><span class="sp-arrow">&rarr;</span></a>
   </div>
 </section>
 
@@ -122,12 +122,8 @@
  {"q": "Rate of gradient descent with \\(\\alpha = 1/M\\) on a convex, \\(M\\)-smooth function?", "a": "Sub-linear: \\(f(x_k) - z^* \\le \\dfrac{M\\|x_0 - x^*\\|^2}{2k}\\). Reaching accuracy \\(\\varepsilon\\) takes \\(O(1/\\varepsilon)\\) iterations."},
  {"q": "Rate of gradient descent with \\(\\alpha = 1/M\\) on an \\(m\\)-strongly convex, \\(M\\)-smooth function?", "a": "Linear: \\(f(x_k) - z^* \\le (1 - m/M)^k (f(x_0) - z^*)\\). Reaching accuracy \\(\\varepsilon\\) takes \\(O\\big(\\tfrac{M}{m} \\log \\tfrac{1}{\\varepsilon}\\big)\\) iterations."},
  {"q": "Define linear, sub-linear, super-linear and quadratic convergence.", "a": "With \\(\\lim |z_{k+1} - z^*| / |z_k - z^*|^p = \\beta\\): linear is \\(p = 1,\\ 0 &lt; \\beta &lt; 1\\). Sub-linear is \\(p = 1,\\ \\beta = 1\\). Super-linear is \\(p = 1,\\ \\beta = 0\\). Quadratic is \\(p = 2\\)."},
- {"q": "What is the condition number, and why does it matter for gradient descent?", "a": "For a quadratic with matrix \\(Q\\), \\(\\kappa(Q) = \\lambda_{\\max}/\\lambda_{\\min}\\). In general \\(\\kappa = M/m\\). Large \\(\\kappa\\) means long narrow valleys, zigzagging and slow convergence."},
- {"q": "Exact line search versus backtracking line search?", "a": "Exact: choose \\(\\alpha_k\\) that minimizes \\(f(x_k + \\alpha d_k)\\). Fewer iterations, but each one solves a 1D problem. Backtracking: shrink \\(\\alpha\\) until a sufficient-decrease test passes. More iterations, cheaper each."},
- {"q": "State the backtracking (sufficient decrease) test.", "a": "Start at \\(\\alpha = s\\). Accept \\(\\alpha\\) if \\(f(x_k + \\alpha d_k) \\le f(x_k) + \\sigma \\alpha \\nabla f(x_k)^\\top d_k\\) with \\(0 &lt; \\sigma &lt; 1/2\\). Otherwise set \\(\\alpha \\leftarrow \\beta \\alpha\\) with \\(0 &lt; \\beta &lt; 1\\) and test again."},
- {"q": "What does diagonal scaling do?", "a": "It uses \\(x_{k+1} = x_k - \\alpha_k D \\nabla f(x_k)\\) with a positive diagonal \\(D\\). This is gradient descent after a change of units, chosen to make the problem better conditioned."},
- {"q": "Steepest descent in the 1-norm is the same as which method?", "a": "Coordinate descent. The best unit step in the 1-norm moves along the single coordinate with the largest \\(|\\partial f / \\partial x_i|\\)."},
- {"q": "Constant step size on \\(f(x) = \\tfrac12 x^\\top Q x - c^\\top x\\). Which \\(\\alpha\\) are stable?", "a": "The error evolves as \\(x_{k+1} - x^* = (I - \\alpha Q)(x_k - x^*)\\). It converges if and only if \\(0 &lt; \\alpha &lt; 2/\\lambda_{\\max}(Q)\\)."}
+ {"q": "What goes wrong with a constant step size that is too small, or too large?", "a": "Too small: little progress per iteration and slow convergence. Too large: the iterates overshoot and the behaviour becomes unstable. In between, convergence can be much faster."},
+ {"q": "\\(f\\) is not convex. How does the lecture reduce the risk of ending in a poor local minimum?", "a": "Run gradient descent from several starting points, in parallel, and keep the best output. Starting point and step size can also be tuned together."}
 ]
 </script>
   </div>
@@ -215,51 +211,7 @@
   </div>
 
   <div class="quiz">
-    <div class="q-label">Question 8 · Stability</div>
-    <div class="q-text">Gradient descent with a constant step on \(f(x) = \tfrac12 x^\top Q x\), where the eigenvalues of \(Q\) are 1 and 10. Which step size makes the iterates diverge from most starting points?</div>
-    <div class="opts">
-      <button class="opt">\(\alpha = 0.05\)</button>
-      <button class="opt">\(\alpha = 0.15\)</button>
-      <button class="opt" data-correct>\(\alpha = 0.25\)</button>
-    </div>
-    <div class="feedback">The error is multiplied by \(I - \alpha Q\) each step, with eigenvalues \(1 - \alpha\) and \(1 - 10\alpha\). Stability needs \(|1 - 10\alpha| &lt; 1\), so \(\alpha &lt; 2/10 = 0.2\). At \(\alpha = 0.25\) the factor is \(-1.5\), and that component grows.</div>
-  </div>
-
-  <div class="quiz">
-    <div class="q-label">Question 9 · Conditioning</div>
-    <div class="q-text">You minimize \(f(x) = \tfrac12 x^\top Q x - c^\top x\) with \(Q = 4I\) using gradient descent with exact line search. How many iterations does it take?</div>
-    <div class="opts">
-      <button class="opt" data-correct>One, from any starting point.</button>
-      <button class="opt">About \(\log(1/\varepsilon)\).</button>
-      <button class="opt">It depends on how far \(x_0\) is from \(x^*\).</button>
-    </div>
-    <div class="feedback">With \(\kappa(Q) = 1\) the level sets are circles, so \(-\nabla f(x_0)\) points straight at \(x^*\). Exact line search stops exactly there. The Kantorovich factor \(\left(\tfrac{\kappa - 1}{\kappa + 1}\right)^2\) equals 0.</div>
-  </div>
-
-  <div class="quiz">
-    <div class="q-label">Question 10 · Scaling</div>
-    <div class="q-text">One variable is measured in kilometres and another in millimetres. Gradient descent zigzags badly. The cleanest fix from the lecture is to:</div>
-    <div class="opts">
-      <button class="opt">Use a much smaller constant step size.</button>
-      <button class="opt" data-correct>Use scaled gradient descent \(x_{k+1} = x_k - \alpha_k D \nabla f(x_k)\) with a diagonal \(D\) that puts both variables on comparable scales.</button>
-      <button class="opt">Switch to the 1-norm steepest descent direction.</button>
-    </div>
-    <div class="feedback">Diagonal scaling is a change of units. It shrinks the condition number of the Hessian. A smaller step only makes the zigzag slower.</div>
-  </div>
-
-  <div class="quiz">
-    <div class="q-label">Question 11 · Steepest descent</div>
-    <div class="q-text">Steepest descent with respect to the 1-norm, \(d_k \in \arg\min\{\nabla f(x_k)^\top v : \|v\|_1 = 1\}\), is equivalent to:</div>
-    <div class="opts">
-      <button class="opt">Ordinary gradient descent.</button>
-      <button class="opt">Scaled gradient descent with \(D = I\).</button>
-      <button class="opt" data-correct>Coordinate descent: move one variable at a time.</button>
-    </div>
-    <div class="feedback">Over the 1-norm ball, a linear function is minimized at a corner, \(\pm e_i\). The best corner is the coordinate with the largest \(|\partial f/\partial x_i|\). The 2-norm gives ordinary gradient descent.</div>
-  </div>
-
-  <div class="quiz">
-    <div class="q-label">Question 12 · Regression</div>
+    <div class="q-label">Question 8 · Regression</div>
     <div class="q-text">Ridge regression minimizes \(f(\beta) = \tfrac12 \|y - X\beta\|^2 + \tfrac{\lambda}{2}\|\beta\|^2\) with \(\lambda &gt; 0\). Which statement is true?</div>
     <div class="opts">
       <button class="opt">It may have several local minima, so gradient descent might get stuck.</button>
@@ -275,7 +227,7 @@
 </main>
 
 <footer class="site-foot"><div class="container">
-  <span>Sources: 15.C57 Lecture 18 · Boyd and Vandenberghe, Convex Optimization, 9.1 to 9.4</span>
+  <span>Sources: 15.C57 Lecture 18 · Boyd and Vandenberghe, Convex Optimization, 9.1 and 9.3</span>
   <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
 </div></footer>
 </body>

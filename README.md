@@ -15,7 +15,7 @@ Unofficial. The content is written from the lecture notes and the two course tex
 | 15 | Adaptive optimization | Here and now, wait and see · Benders decomposition · The value of adapting |
 | 16 | Dynamic programming | The knapsack recursion · States, decisions and Bellman's equation · Inventory and recruiting |
 | 17 | Non-linear optimization: modeling | A tour of non-linear models · Problem classes and convexity · Convex optimization |
-| 18 | Gradient descent | Optimality conditions · The algorithm · Convergence guarantees · Step sizes, initialization and scaling |
+| 18 | Gradient descent | Optimality conditions · The algorithm · Convergence guarantees · Step sizes and initialization |
 | 19 | Stochastic gradient descent | Why stochastic gradients · The SGD algorithm · Convergence and step sizes · Mini-batches and practice |
 | 20 | Newton's method | Not yet written |
 
