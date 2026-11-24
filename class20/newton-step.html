@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>20a The Newton step · Opti</title>
+<meta name="description" content="Newton's method from two angles: minimize the second-order Taylor model, or find the root of the linearized gradient. The Newton direction, the Newton decrement, the algorithm and logistic regression.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/newton.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 20: Newton's method</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 20 · Part a</p>
+  <h1>The Newton <em>step</em></h1>
+  <p class="lede">Gradient descent uses the slope and nothing else. Newton's method also uses the curvature. It replaces \(f\) by its best quadratic approximation and jumps straight to that quadratic's minimum.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#design">Four design questions</a></li>
+      <li><a href="#second">The second-order view</a></li>
+      <li><a href="#first">The first-order view</a></li>
+      <li><a href="#see">See both views</a></li>
+      <li><a href="#algorithm">The algorithm</a></li>
+      <li><a href="#logistic">Logistic regression</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="design">
+    <h2>Four design questions</h2>
+    <p>Class 18 introduced the generic descent method for \(\min_{x \in \mathbb{R}^n} f(x)\): pick a direction \(d_k\) with \(\nabla f(x_k)^\top d_k &lt; 0\), pick a step size \(\alpha_k &gt; 0\), update \(x_{k+1} = x_k + \alpha_k d_k\), repeat. Every such method answers four questions:</p>
+    <ol>
+      <li><strong>Initialization:</strong> where to start, \(x_0\).</li>
+      <li><strong>Descent:</strong> which direction \(d_k\).</li>
+      <li><strong>Step size:</strong> how far to go, \(\alpha_k\).</li>
+      <li><strong>Termination:</strong> when to stop, typically when \(\|\nabla f(x_k)\| \le \varepsilon\).</li>
+    </ol>
+    <p>Gradient descent answered question 2 with \(d_k = -\nabla f(x_k)\). Newton's method gives a different answer, built from second derivatives.</p>
+  </section>
+
+  <section class="block" id="second">
+    <h2>The second-order view: minimize a quadratic model</h2>
+    <p>Around the current point \(x\), approximate \(f\) by its second-order Taylor expansion:</p>
+    <div class="math-block">\[ f(y) \approx \hat f(y) = f(x) + \nabla f(x)^\top (y - x) + \tfrac12 (y - x)^\top \nabla^2 f(x) (y - x). \]</div>
+    <p>Instead of minimizing \(f\), minimize the model \(\hat f\). Its first-order condition is a linear equation in \(y\):</p>
+    <div class="math-block">\[ \nabla \hat f(y) = 0 \iff \nabla f(x) + \nabla^2 f(x)(y - x) = 0 \iff y = x - \big(\nabla^2 f(x)\big)^{-1} \nabla f(x). \]</div>
+    <div class="box">
+      <span class="label">Definition</span>
+      <p><strong>Newton direction:</strong> \(d = -\big(\nabla^2 f(x)\big)^{-1} \nabla f(x)\).</p>
+      <p><strong>Newton decrement:</strong> \(\lambda(x) = \big(\nabla f(x)^\top \nabla^2 f(x)^{-1} \nabla f(x)\big)^{1/2}\).</p>
+    </div>
+    <p>The decrement measures how much progress the model promises. The drop from \(f(x)\) to the model's minimum is exactly half its square:</p>
+    <div class="math-block">\[ f(x) - \min_y \hat f(y) = f(x) - \hat f(x + d) = \tfrac12 \lambda(x)^2. \]</div>
+    <details class="more"><summary>Why half the square?</summary><div>
+      <p>Write \(g = \nabla f(x)\) and \(H = \nabla^2 f(x)\), so \(d = -H^{-1}g\). Plug into the model: \(\hat f(x + d) - f(x) = g^\top d + \tfrac12 d^\top H d = -g^\top H^{-1} g + \tfrac12 g^\top H^{-1} g = -\tfrac12 \lambda(x)^2\).</p>
+    </div></details>
+  </section>
+
+  <section class="block" id="first">
+    <h2>The first-order view: find a root of the gradient</h2>
+    <p>Now forget about minimizing. A minimum is a stationary point, so we want to solve the equation \(\nabla f(y) = 0\). Linearize the gradient around \(x\):</p>
+    <div class="math-block">\[ \nabla f(y) \approx g(y) = \nabla f(x) + \nabla^2 f(x)(y - x). \]</div>
+    <p>Setting \(g(y) = 0\) gives exactly the same point, \(y = x - \big(\nabla^2 f(x)\big)^{-1}\nabla f(x)\). This is the older reading. Newton and Raphson developed the method in the 1600s to solve systems of equations. Simpson extended it to optimization in the 1700s, by applying it to the equation \(\nabla f(y) = 0\).</p>
+    <div class="callout">
+      <span class="label">Two views, one step</span>
+      <p>Second-order view: the minimizer of the quadratic model of \(f\). First-order view: the root of the linear model of \(\nabla f\). Both use the Hessian, so both approximate \(f\) better than gradient descent does.</p>
+    </div>
+  </section>
+
+  <section class="block" id="see">
+    <h2>See both views</h2>
+    <div class="widget" data-widget="newton-views">
+      <div class="widget-head"><span class="label">Interactive</span><h4>One Newton step, two pictures</h4><p>Take Newton steps and switch between the views. The red point is the next iterate: the bottom of the red parabola in the second-order view, the zero of the red line in the first-order view. Then try the other two functions.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>Three things to notice:</p>
+    <ul>
+      <li><strong>Few steps.</strong> On \(6x - \log x\) from \(x_0 = 0.2\), four steps already give six correct digits of \(x^* = 1/6\).</li>
+      <li><strong>Maxima attract too.</strong> On the non-convex quartic, start at \(x_0 = 0.4\), where \(f'' &lt; 0\). The model is then an upside-down parabola, and Newton jumps to its top. The iterates converge to the local maximum. Newton solves \(\nabla f = 0\) and cannot tell a minimum from a maximum.</li>
+      <li><strong>Some starts fail.</strong> On \(6x - \log x\), start at \(x_0 = 0.4\). The first step lands at \(-0.16\), outside the domain. Part b explains why.</li>
+    </ul>
+  </section>
+
+  <section class="block" id="algorithm">
+    <h2>The algorithm</h2>
+    <div class="algo">
+      <span class="label">Algorithm · Newton's method</span>
+      <ol>
+        <li>Choose a starting point \(x_0 \in \mathbb{R}^n\). Set \(k = 0\).</li>
+        <li>Repeat until the stopping criterion holds:
+          <ol>
+            <li>Compute the Newton direction \(d_k = -\big(\nabla^2 f(x_k)\big)^{-1}\nabla f(x_k)\).</li>
+            <li>Update \(x_{k+1} = x_k + d_k\).</li>
+            <li>Set \(k \leftarrow k + 1\).</li>
+          </ol>
+        </li>
+      </ol>
+    </div>
+    <ul>
+      <li><strong>"Pure" Newton</strong> always uses step size 1. Part c adds a step size \(\alpha_k \le 1\).</li>
+      <li><strong>A second-order method.</strong> It uses the gradient and the Hessian. Each iteration makes more progress than gradient descent, but costs more: solving the \(n \times n\) linear system takes \(O(n^3)\) operations.</li>
+      <li><strong>Stopping rule.</strong> Stop when the estimated improvement is small: \(\lambda(x_k)^2/2 \le \varepsilon\).</li>
+    </ul>
+  </section>
+
+  <section class="block" id="logistic">
+    <h2>Logistic regression</h2>
+    <p>The lecture's example fits a logistic regression by maximizing the log-likelihood:</p>
+    <div class="math-block">\[ \max_\beta\ f(\beta) = \sum_{i=1}^n \Big\{ y_i x_i^\top \beta - \log\big(1 + e^{x_i^\top \beta}\big) \Big\}. \]</div>
+    <p>Its derivatives:</p>
+    <div class="math-block">\[ \nabla f(\beta) = X^\top\big(y - p(X, \beta)\big), \quad p_i(X, \beta) = \frac{e^{x_i^\top\beta}}{1 + e^{x_i^\top\beta}}, \qquad \nabla^2 f(\beta) = -X^\top W X, \quad W = \mathrm{diag}\big(p_i(1 - p_i)\big). \]</div>
+    <ul>
+      <li>\(\nabla^2 f(\beta) \preceq 0\), so maximizing \(f\) is a convex optimization problem.</li>
+      <li>The optimum is the stationary point: \(X^\top\big(y - p(X, \beta^*)\big) = 0\).</li>
+    </ul>
+    <p>Newton's update for a maximization is the same formula, with the Hessian \(-X^\top W X\):</p>
+    <div class="math-block">\[ \beta^{k+1} = \beta^k + (X^\top W X)^{-1} X^\top\big(y - p(X, \beta^k)\big) = (X^\top W X)^{-1} X^\top W z^k, \qquad z^k = X\beta^k + W^{-1}\big(y - p(X, \beta^k)\big). \]</div>
+    <p>Read the last form as a regression. It is the solution of a weighted least-squares problem:</p>
+    <div class="math-block">\[ \beta^{k+1} = \arg\min_\beta\ (z^k - X\beta)^\top W (z^k - X\beta). \]</div>
+    <p>So each Newton step refits a weighted linear regression to an adjusted response \(z^k\), with weights \(W\) that are recomputed from the current fit. This is why the method is called <strong>iteratively re-weighted least squares</strong> (IRLS). Data points with \(p_i\) near 0.5 get the most weight, since the model is least certain about them.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Newton direction \(d = -\big(\nabla^2 f(x)\big)^{-1}\nabla f(x)\): minimize the quadratic model of \(f\), or equivalently find the root of the linear model of \(\nabla f\).</li>
+      <li>Newton decrement \(\lambda(x)^2 = \nabla f(x)^\top \nabla^2 f(x)^{-1} \nabla f(x)\). The model predicts a decrease of \(\lambda(x)^2/2\), which is also the stopping rule.</li>
+      <li>Pure Newton uses step size 1. Each iteration costs \(O(n^3)\) and makes much more progress than a gradient step.</li>
+      <li>For logistic regression, Newton's method is iteratively re-weighted least squares.</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>The practice exam asks for one-dimensional Newton iterates by hand. In one dimension the update is simply \(x_{k+1} = x_k - f'(x_k)/f''(x_k)\). For \(f(x) = 6x - \log x\) this is \(x_{k+1} = x_k - x_k^2(6 - 1/x_k) = 2x_k - 6x_k^2\). Part b finishes the problem.</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">\(f(x) = \tfrac12 x^\top Q x - c^\top x\) with \(Q \succ 0\). From any \(x_0\), where does one pure Newton step land?</div>
+      <div class="opts">
+        <button class="opt" data-correct>Exactly at the minimizer \(Q^{-1}c\).</button>
+        <button class="opt">Closer to the minimizer, by a factor depending on \(Q\).</button>
+        <button class="opt">It depends on how far \(x_0\) is from the minimizer.</button>
+      </div>
+      <div class="feedback">For a quadratic, the second-order model is \(f\) itself. Newton minimizes the model, so it lands on the minimizer: \(x_1 = x_0 - Q^{-1}(Qx_0 - c) = Q^{-1}c\).</div>
+    </div>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">At \(x_k\), \(\nabla f(x_k) = (2, 0)\) and \(\nabla^2 f(x_k) = \mathrm{diag}(4, 1)\). What is \(\lambda(x_k)^2/2\), the improvement the model predicts?</div>
+      <div class="opts">
+        <button class="opt">2</button>
+        <button class="opt" data-correct>0.5</button>
+        <button class="opt">1</button>
+      </div>
+      <div class="feedback">\(\lambda^2 = \nabla f^\top (\nabla^2 f)^{-1} \nabla f = 2 \cdot \tfrac14 \cdot 2 = 1\), so \(\lambda^2/2 = 0.5\). The Newton direction is \(d = (-0.5, 0)\).</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="./"><small>Back to</small>Class 20 overview</a>
+    <a class="next" href="local-convergence.html"><small>Next · 20b</small>Local convergence</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 20, slides 2 to 8 · Background: Boyd and Vandenberghe 9.5.1</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

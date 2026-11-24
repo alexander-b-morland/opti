@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Class 20 · Newton's method · Opti</title>
+<meta name="description" content="Newton's method for unconstrained minimization: the Newton step and decrement, logistic regression, local quadratic convergence, and global convergence with a step size under strong convexity.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="/">&larr; All classes</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 20 · Non-linear optimization</p>
+  <h1>Newton's <em>method</em></h1>
+  <p class="lede">Use the curvature as well as the slope. Newton's method replaces the function by its quadratic approximation and jumps to that quadratic's minimum. Near the optimum it is astonishingly fast. Far away it needs a safety net.</p>
+</header>
+
+<nav class="chapter-toc" aria-label="On this page"><div class="container">
+  <ol>
+    <li><a href="#big-picture"><span>01</span>Big picture</a></li>
+    <li><a href="#parts"><span>02</span>Parts</a></li>
+    <li><a href="#flashcards"><span>03</span>Flashcards</a></li>
+    <li><a href="#quiz"><span>04</span>Test yourself</a></li>
+  </ol>
+</div></nav>
+
+<main class="container">
+<section class="block" id="big-picture">
+  <span class="section-badge">Overview</span>
+  <h2>The big picture</h2>
+  <p class="lead">Class 18 walked downhill along the gradient. Class 19 made each step cheaper. Class 20 goes the other way: each step costs more, because it uses second derivatives, and in return far fewer steps are needed.</p>
+  <div class="math-block">\[ x_{k+1} = x_k - \big(\nabla^2 f(x_k)\big)^{-1}\nabla f(x_k) \]</div>
+  <div class="tabs">
+    <div class="tab-panel" data-tab="Analogy">
+      <p class="analogy">Gradient descent is a hiker in fog who can only feel which way the ground slopes, and takes a cautious step that way. Newton's method also feels how the slope is changing. From that it pictures the valley as a bowl, works out where the bottom of the bowl is, and jumps there. If the bowl is a good picture of the valley, one or two jumps are enough. If it is not, the jump can land somewhere strange.</p>
+    </div>
+    <div class="tab-panel" data-tab="Two views">
+      <p>Second-order view: minimize the second-order Taylor approximation of \(f\). First-order view: find the root of the first-order Taylor approximation of \(\nabla f\). Both give the same step. The first view is the original one: Newton and Raphson built the method in the 1600s to solve equations.</p>
+    </div>
+    <div class="tab-panel" data-tab="The trade-off">
+      <p>Each iteration needs the Hessian and a linear solve, \(O(n^3)\) operations. In return, close to the optimum the error is squared at every step. On the lecture's example in part b, Newton needs 6 iterations where gradient descent with a constant step needs over a hundred. But pure Newton is only guaranteed to work near the optimum, and it is attracted to maxima as readily as to minima.</p>
+    </div>
+  </div>
+
+  <h3>The story of the class in three steps</h3>
+  <div class="flow three">
+    <div class="step"><b>20a · Step</b><span>The Newton direction, the decrement, logistic regression.</span></div>
+    <div class="step"><b>20b · Local</b><span>Quadratic convergence near the optimum. No convexity needed.</span></div>
+    <div class="step"><b>20c · Global</b><span>A step size and strong convexity: a damped phase, then a local phase.</span></div>
+  </div>
+
+  <div class="callout">
+    <span class="label">Four takeaways from the lecture</span>
+    <ol style="margin:0">
+      <li>Newton's method was first developed to find roots of equations, then extended to optimization.</li>
+      <li>It augments descent methods with second-order (Hessian) information.</li>
+      <li>It converges very fast (quadratically) locally. So it works in two steps: get near a stationary point, then find it, exploiting quadratic convergence.</li>
+      <li>Numerous enhancements exist to address its global convergence issues.</li>
+    </ol>
+  </div>
+
+  <h3>For your note sheet</h3>
+  <div class="sheet">
+    <div><b>Newton step</b>\(d = -\big(\nabla^2 f(x)\big)^{-1}\nabla f(x)\)<br>1D: \(x_{k+1} = x_k - f'(x_k)/f''(x_k)\)<br>Decrement \(\lambda(x)^2 = \nabla f^\top (\nabla^2 f)^{-1}\nabla f\), stop when \(\lambda^2/2 \le \varepsilon\).</div>
+    <div><b>Local convergence</b>\(\|(\nabla^2 f(x^*))^{-1}\| \le 1/m\), Hessian \(L\)-Lipschitz, \(\|x_0 - x^*\| \le \delta\):<br>\(\|x_{k+1} - x^*\| \le \frac{3L}{2m}\|x_k - x^*\|^2\). \(O(\log\log\frac1\varepsilon)\).</div>
+    <div><b>Global convergence</b>\(M\)-smooth, \(m\)-strongly convex, \(L\)-Lipschitz Hessian, \(\eta \le m^2/L\):<br>\(\|\nabla f\| \ge \eta\): \(\alpha = m/M\), \(f\) drops by \(\gamma = \frac{m}{2M^2}\eta^2\).<br>\(\|\nabla f\| &lt; \eta\): \(\alpha = 1\), quadratic.</div>
+    <div><b>GD, SGD, Newton</b>Cost per iteration: SGD &lt; GD &lt; Newton (\(O(n^3)\)).<br>Iterations: Newton &lt; GD &lt; SGD.<br>Descent with step 1? Newton: no.</div>
+  </div>
+</section>
+
+<section class="block" id="parts">
+  <span class="section-badge">Parts</span>
+  <h2>Explore the class</h2>
+  <div class="subpage-list">
+    <a class="subpage-card" href="newton-step.html"><span class="sp-num">20a</span><div><div class="sp-title">The Newton step</div><div class="sp-desc">Second-order and first-order views, the decrement, the algorithm and logistic regression</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="local-convergence.html"><span class="sp-num">20b</span><div><div class="sp-title">Local convergence</div><div class="sp-desc">The quadratic convergence theorem, its proof, a practice exam problem, Newton against gradient descent</div></div><span class="sp-arrow">&rarr;</span></a>
+    <a class="subpage-card" href="global-convergence.html"><span class="sp-num">20c</span><div><div class="sp-title">Global convergence</div><div class="sp-desc">What goes wrong far away, Newton with a step size, the two-phase theorem and its proof</div></div><span class="sp-arrow">&rarr;</span></a>
+  </div>
+</section>
+
+<section class="block flashcards-section" id="flashcards">
+  <span class="section-badge">Quick review</span>
+  <h2>Flashcards</h2>
+  <p>Click a card to flip it. Arrow keys move between cards once a card has focus.</p>
+  <div class="flashcards">
+<script type="application/json">
+[
+ {"q": "Write the Newton direction.", "a": "\\(d = -\\big(\\nabla^2 f(x)\\big)^{-1}\\nabla f(x)\\). In one dimension, \\(x_{k+1} = x_k - f'(x_k)/f''(x_k)\\)."},
+ {"q": "Derive the Newton step from the second-order view.", "a": "Minimize \\(\\hat f(y) = f(x) + \\nabla f(x)^\\top(y - x) + \\tfrac12(y - x)^\\top\\nabla^2 f(x)(y - x)\\). Setting \\(\\nabla\\hat f(y) = 0\\) gives \\(y = x - \\nabla^2 f(x)^{-1}\\nabla f(x)\\)."},
+ {"q": "Derive the Newton step from the first-order view.", "a": "Linearize the gradient: \\(\\nabla f(y) \\approx \\nabla f(x) + \\nabla^2 f(x)(y - x)\\). Its root is \\(y = x - \\nabla^2 f(x)^{-1}\\nabla f(x)\\). Same step."},
+ {"q": "Define the Newton decrement. What does it measure?", "a": "\\(\\lambda(x) = \\big(\\nabla f(x)^\\top\\nabla^2 f(x)^{-1}\\nabla f(x)\\big)^{1/2}\\). The quadratic model predicts the decrease \\(f(x) - \\min_y \\hat f(y) = \\lambda(x)^2/2\\)."},
+ {"q": "What is the stopping criterion for Newton's method?", "a": "Stop when the estimated improvement is small: \\(\\lambda(x_k)^2/2 \\le \\varepsilon\\)."},
+ {"q": "Cost of one Newton iteration?", "a": "\\(O(n^3)\\) operations, to solve the \\(n \\times n\\) linear system with the Hessian. More work than a gradient step, but much more progress."},
+ {"q": "Newton's update for logistic regression, and its interpretation?", "a": "\\(\\beta^{k+1} = \\beta^k + (X^\\top WX)^{-1}X^\\top(y - p(X, \\beta^k)) = (X^\\top WX)^{-1}X^\\top Wz^k\\). It is iteratively re-weighted least squares: \\(\\beta^{k+1} = \\arg\\min_\\beta (z^k - X\\beta)^\\top W(z^k - X\\beta)\\)."},
+ {"q": "State the local convergence theorem.", "a": "If \\(\\nabla f(x^*) = 0\\), \\(\\|\\nabla^2 f(x^*)^{-1}\\| \\le 1/m\\), the Hessian is \\(L\\)-Lipschitz in \\(\\mathcal{B}(x^*, \\beta)\\), and \\(\\|x_0 - x^*\\| \\le \\delta = \\min\\{\\beta, 2m/(3L)\\}\\), then the iterates stay within \\(\\delta\\) and \\(\\|x_{k+1} - x^*\\| \\le \\frac{3L}{2m}\\|x_k - x^*\\|^2\\)."},
+ {"q": "How many iterations for accuracy \\(\\varepsilon\\) near the optimum?", "a": "\\(O(\\log\\log(1/\\varepsilon))\\), from the corollary \\(\\|x_k - x^*\\| \\le \\frac1C(C\\|x_0 - x^*\\|)^{2^k}\\) with \\(C = 3L/(2m)\\)."},
+ {"q": "Does local convergence of Newton require convexity?", "a": "No. It only needs \\(\\nabla f(x^*) = 0\\) with \\(\\nabla^2 f(x^*)\\) nonsingular and not badly behaved nearby. That is also why Newton is attracted to maxima."},
+ {"q": "Is pure Newton (step size 1) a descent method?", "a": "No. Nothing guarantees \\(f(x_{k+1}) \\le f(x_k)\\). It can be attracted to a local maximum, and the full step can be too large where the quadratic model is poor."},
+ {"q": "When is the Newton direction a descent direction?", "a": "When \\(\\nabla^2 f(x) \\succ 0\\) and \\(\\nabla f(x) \\neq 0\\): then \\(\\nabla f(x)^\\top d = -\\lambda(x)^2 &lt; 0\\), so \\(f(x + \\alpha d) &lt; f(x)\\) for small \\(\\alpha\\)."},
+ {"q": "State the step-size rule of the global convergence theorem.", "a": "With \\(0 &lt; \\eta \\le m^2/L\\): if \\(\\|\\nabla f(x_k)\\| \\ge \\eta\\), take \\(\\alpha_k = m/M\\), which lowers \\(f\\) by at least \\(\\gamma\\). If \\(\\|\\nabla f(x_k)\\| &lt; \\eta\\), take \\(\\alpha_k = 1\\), and the gradient shrinks quadratically."},
+ {"q": "What are the two phases of Newton's method?", "a": "Damped phase: progress of at least \\(\\gamma\\) per iteration, at most \\((f(x_0) - z^*)/\\gamma\\) iterations. Local phase: quadratic convergence, about \\(\\log_2\\log_2(\\varepsilon_0/\\varepsilon)\\) iterations."},
+ {"q": "What is \\(\\gamma\\) in the damped phase?", "a": "\\(\\gamma = \\frac{m}{2M^2}\\eta^2\\). It comes from \\(f(x_{k+1}) \\le f(x_k) - \\frac{m}{2M}\\lambda(x_k)^2\\) and \\(\\lambda(x_k)^2 \\ge \\|\\nabla f(x_k)\\|^2/M\\)."},
+ {"q": "Rank GD, SGD and Newton by cost per iteration and by number of iterations.", "a": "Cost per iteration, cheapest first: SGD, GD, Newton. Number of iterations, fewest first: Newton, GD, SGD."}
+]
+</script>
+  </div>
+</section>
+
+<section class="block" id="quiz">
+  <span class="section-badge">Exam practice</span>
+  <h2>Test yourself</h2>
+  <p>Multiple choice in the style of the midterm. Say your one-line justification before you click.</p>
+
+  <div class="quiz">
+    <div class="q-label">Question 1 · Descent</div>
+    <div class="q-text">Newton's method with step size 1 is a descent algorithm. True or false?</div>
+    <div class="opts">
+      <button class="opt">True</button>
+      <button class="opt" data-correct>False</button>
+    </div>
+    <div class="feedback">Newton's method can be attracted by a local maximum, and the full step from the quadratic model can be too large. Nothing guarantees \(f(x_{k+1}) \le f(x_k)\).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 2 · One dimension</div>
+    <div class="q-text">Minimize \(f(x) = 6x - \log x\) over \(x &gt; 0\) with pure Newton. Which starting points give convergence to \(x^* = 1/6\)?</div>
+    <div class="opts">
+      <button class="opt">Every \(x_0 &gt; 0\), since \(f\) is convex.</button>
+      <button class="opt" data-correct>Exactly the \(x_0\) with \(0 &lt; x_0 &lt; 1/3\).</button>
+      <button class="opt">Only \(x_0\) with \(|x_0 - 1/6| &lt; 0.01\).</button>
+    </div>
+    <div class="feedback">The update is \(x_{k+1} = 2x_k - 6x_k^2\), so \(x_{k+1} - \tfrac16 = -6(x_k - \tfrac16)^2\) and the error ratio is \(|1 - 6x_k|\). The error shrinks if and only if \(6|x_0 - \tfrac16| &lt; 1\). From \(x_0 = 0.4\) the first step lands at \(-0.16\). Convexity does not save pure Newton.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 3 · Ranking</div>
+    <div class="q-text">On a large regression problem with the same small step size, rank gradient descent, Newton's method and SGD by the number of iterations, from fewest to most.</div>
+    <div class="opts">
+      <button class="opt" data-correct>Newton, gradient descent, SGD</button>
+      <button class="opt">SGD, gradient descent, Newton</button>
+      <button class="opt">Gradient descent, Newton, SGD</button>
+    </div>
+    <div class="feedback">Newton uses curvature and needs the fewest iterations. SGD uses noisy one-point gradients and needs the most. The cost per iteration ranks the other way round.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 4 · Quadratics</div>
+    <div class="q-text">\(f(x) = \tfrac12 x^\top Qx - c^\top x\) with \(Q \succ 0\). How many pure Newton iterations does it take to reach the minimum?</div>
+    <div class="opts">
+      <button class="opt" data-correct>One, from any starting point.</button>
+      <button class="opt">About \(\log\log(1/\varepsilon)\).</button>
+      <button class="opt">It depends on the eigenvalues of \(Q\).</button>
+    </div>
+    <div class="feedback">The second-order model of a quadratic is the quadratic itself. Newton minimizes the model exactly: \(x_1 = x_0 - Q^{-1}(Qx_0 - c) = Q^{-1}c\).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 5 · Local convergence</div>
+    <div class="q-text">Which assumption does the local convergence theorem for Newton's method not require?</div>
+    <div class="opts">
+      <button class="opt">\(\nabla f(x^*) = 0\).</button>
+      <button class="opt">A Lipschitz Hessian near \(x^*\).</button>
+      <button class="opt" data-correct>Convexity of \(f\).</button>
+    </div>
+    <div class="feedback">The theorem needs a stationary point, a bounded inverse Hessian at \(x^*\) and a Lipschitz Hessian nearby. Convexity is not needed. Without it, \(x^*\) can be a maximum, and Newton converges to it just as fast.</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 6 · Global convergence</div>
+    <div class="q-text">Under the global convergence theorem, the gradient norm is \(\|\nabla f(x_k)\| = 5\) and \(\eta = 0.1\). Which step size does the theorem prescribe?</div>
+    <div class="opts">
+      <button class="opt">\(\alpha_k = 1\)</button>
+      <button class="opt" data-correct>\(\alpha_k = m/M\)</button>
+      <button class="opt">\(\alpha_k = 1/M\)</button>
+    </div>
+    <div class="feedback">The gradient is above \(\eta\), so the method is in the damped phase: \(\alpha_k = m/M\), which guarantees a drop of at least \(\gamma = \frac{m}{2M^2}\eta^2\). Full steps start once \(\|\nabla f(x_k)\| &lt; \eta\).</div>
+  </div>
+
+  <div class="quiz">
+    <div class="q-label">Question 7 · Logistic regression</div>
+    <div class="q-text">Applied to logistic regression, each Newton iteration amounts to:</div>
+    <div class="opts">
+      <button class="opt">One stochastic gradient step on a random data point.</button>
+      <button class="opt" data-correct>Solving a weighted least-squares problem with weights recomputed from the current fit.</button>
+      <button class="opt">Solving the same ordinary least-squares problem again.</button>
+    </div>
+    <div class="feedback">\(\beta^{k+1} = \arg\min_\beta (z^k - X\beta)^\top W(z^k - X\beta)\), where \(W\) and the adjusted response \(z^k\) depend on \(\beta^k\). Hence iteratively re-weighted least squares.</div>
+  </div>
+
+  <p class="quiz-score" aria-live="polite"></p>
+</section>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 20 · Background: Boyd and Vandenberghe 9.5</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

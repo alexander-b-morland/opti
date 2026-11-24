@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>20b Local convergence · Opti</title>
+<meta name="description" content="Local quadratic convergence of Newton's method: the theorem, what it means, the proof from the lecture, a practice exam problem worked through, and the lecture example against gradient descent.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/newton.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 20: Newton's method</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 20 · Part b</p>
+  <h1>Local <em>convergence</em></h1>
+  <p class="lede">Close to a stationary point, Newton's method converges quadratically: the error is squared at every step, so the number of correct digits roughly doubles. The catch is the word "close".</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#theorem">The theorem</a></li>
+      <li><a href="#meaning">What it says</a></li>
+      <li><a href="#proof">The proof</a></li>
+      <li><a href="#exam">A practice exam problem</a></li>
+      <li><a href="#example">Newton against gradient descent</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="theorem">
+    <h2>The theorem</h2>
+    <p>The statement measures matrices with the operator norm, the most a matrix can stretch a unit vector:</p>
+    <div class="box">
+      <span class="label">Definition (operator norm of a matrix)</span>
+      <div class="math-block">\[ \|M\| = \max\big\{ \|Mx\| : \|x\| = 1 \big\}. \]</div>
+    </div>
+    <div class="box theorem">
+      <span class="label">Theorem (local convergence of Newton's method)</span>
+      <p>Let \(f\) be twice continuously differentiable with \(\nabla f(x^*) = 0\). Assume that</p>
+      <ul>
+        <li>\(\big\|\big(\nabla^2 f(x^*)\big)^{-1}\big\| \le \tfrac1m\) for some \(m &gt; 0\), and</li>
+        <li>\(\nabla^2 f\) is \(L\)-Lipschitz in the \(\beta\)-ball around \(x^*\): \(\|\nabla^2 f(x) - \nabla^2 f(y)\| \le L\|x - y\|\) for all \(x, y \in \mathcal{B}(x^*, \beta)\).</li>
+      </ul>
+      <p>Define \(\delta = \min\big\{\beta, \tfrac{2m}{3L}\big\}\). If \(\|x_0 - x^*\| \le \delta\), then for all \(k = 0, 1, 2, \dots\)</p>
+      <div class="math-block">\[ \|x_{k+1} - x^*\| \le \delta \qquad\text{and}\qquad \|x_{k+1} - x^*\| \le \frac{3L}{2m}\,\|x_k - x^*\|^2. \]</div>
+    </div>
+    <p>The two assumptions in words. The Hessian at \(x^*\) is invertible, and not nearly singular (its inverse is bounded by \(1/m\)). And the Hessian does not change too fast near \(x^*\).</p>
+    <div class="box theorem">
+      <span class="label">Corollary</span>
+      <div class="math-block">\[ \|x_k - x^*\| \le \frac1C\big(C\|x_0 - x^*\|\big)^{2^k}, \qquad C = \frac{3L}{2m}. \]</div>
+    </div>
+    <p>Apply the theorem \(k\) times. With \(e_k = C\|x_k - x^*\|\), the theorem says \(e_{k+1} \le e_k^2\), so \(e_k \le e_0^{2^k}\). A start in the \(\delta\)-ball gives \(e_0 \le C\delta \le 1\). Whenever \(e_0 &lt; 1\), raising it to the power \(2^k\) makes the error collapse.</p>
+  </section>
+
+  <section class="block" id="meaning">
+    <h2>What it says</h2>
+    <ul>
+      <li><strong>Once in the \(\delta\)-neighbourhood of \(x^*\), the algorithm stays there.</strong></li>
+      <li><strong>Quadratic convergence inside it:</strong> \(\dfrac{\|x_{k+1} - x^*\|}{\|x_k - x^*\|^2} \le \dfrac{3L}{2m}\). In the language of class 18, the order is \(p = 2\).</li>
+      <li><strong>Accuracy \(\varepsilon\) after \(O\big(\log\log\tfrac1\varepsilon\big)\) iterations.</strong> The exponent \(2^k\) is why the logarithm appears twice. In practice this means a handful of iterations, whatever the tolerance.</li>
+      <li><strong>Attracted to local minima and maxima.</strong> The theorem only needs \(\nabla f(x^*) = 0\). A maximum with an invertible Hessian attracts the iterates just as well as a minimum.</li>
+      <li><strong>\(\beta\), \(m\) and \(L\) are hard to estimate,</strong> but the algorithm never uses them. They only appear in the analysis.</li>
+      <li><strong>No convexity needed.</strong> The algorithm and its local convergence only require that \(H(x^*) = \nabla^2 f(x^*)\) is nonsingular and not badly behaved near \(x^*\).</li>
+    </ul>
+    <div class="table-wrap"><table class="compare">
+      <thead><tr><th></th><th>Gradient descent (class 18)</th><th>Newton's method</th></tr></thead>
+      <tbody>
+        <tr><td>Rate</td><td>Linear under strong convexity, \(O\big(\tfrac{M}{m}\log\tfrac1\varepsilon\big)\) iterations</td><td>Quadratic near \(x^*\), \(O\big(\log\log\tfrac1\varepsilon\big)\) iterations</td></tr>
+        <tr><td>Where the guarantee holds</td><td>From any start</td><td>Only from a start close to \(x^*\)</td></tr>
+        <tr><td>Information used</td><td>Gradient</td><td>Gradient and Hessian</td></tr>
+        <tr><td>Work per iteration</td><td>Cheap</td><td>\(O(n^3)\)</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="block" id="proof">
+    <h2>The proof</h2>
+    <p>Write \(g(x) = \nabla f(x)\) and \(H(x) = \nabla^2 f(x)\). The lecture uses two lemmas and states them without proof in the main slides.</p>
+    <div class="box">
+      <span class="label">Lemma 1 (from the Hessian to the gradient)</span>
+      <div class="math-block">\[ g(x_k) - g(x^*) = \int_0^1 H\big(x^* + t(x_k - x^*)\big)(x_k - x^*)\,dt. \]</div>
+      <span class="label" style="margin-top:12px">Lemma 2 (the inverse Hessian stays bounded)</span>
+      <p>Under the conditions of the theorem, \(\|H(x)^{-1}\| \le \dfrac{1}{m - L\|x - x^*\|}\) for all \(x \in \mathcal{B}(x^*, \beta)\).</p>
+    </div>
+    <div class="tabs">
+      <div class="tab-panel" data-tab="Step 1 · error recursion">
+        <p>Start from the definition of \(x_{k+1}\) and use \(g(x^*) = 0\):</p>
+        <div class="math-block">\[ \begin{aligned} x_{k+1} - x^* &= x_k - x^* - H(x_k)^{-1}\big(g(x_k) - g(x^*)\big) \\ &= (x_k - x^*) - H(x_k)^{-1}\int_0^1 H\big(x^* + t(x_k - x^*)\big)(x_k - x^*)\,dt \quad \text{(Lemma 1)} \\ &= H(x_k)^{-1}\int_0^1 \Big[H(x_k) - H\big(x^* + t(x_k - x^*)\big)\Big](x_k - x^*)\,dt. \end{aligned} \]</div>
+        <p>The new error is the old error multiplied by a difference of two Hessians. If the Hessian changes slowly, that difference is small.</p>
+      </div>
+      <div class="tab-panel" data-tab="Step 2 · bound it">
+        <p>Take norms. Lemma 2 bounds \(\|H(x_k)^{-1}\|\). The Lipschitz condition bounds the Hessian difference, since \(x_k\) and \(x^* + t(x_k - x^*)\) are \((1 - t)\|x_k - x^*\|\) apart:</p>
+        <div class="math-block">\[ \|x_{k+1} - x^*\| \le \frac{1}{m - L\|x_k - x^*\|}\int_0^1 L(1 - t)\|x_k - x^*\|^2\,dt = \frac{L}{2\big(m - L\|x_k - x^*\|\big)}\|x_k - x^*\|^2. \]</div>
+      </div>
+      <div class="tab-panel" data-tab="Step 3 · use δ">
+        <p>Inside the \(\delta\)-ball, \(L\|x_k - x^*\| \le 2m/3\), so the denominator is at least \(2(m - 2m/3) = 2m/3\). Two conclusions follow:</p>
+        <ol>
+          <li>\(\|x_{k+1} - x^*\| \le \dfrac{2m/3}{2m/3}\|x_k - x^*\| = \|x_k - x^*\| \le \delta\). The iterates stay in the ball.</li>
+          <li>\(\|x_{k+1} - x^*\| \le \dfrac{L}{2m/3}\|x_k - x^*\|^2 = \dfrac{3L}{2m}\|x_k - x^*\|^2\). Quadratic convergence.</li>
+        </ol>
+        <p>Conclusion 1 is what makes induction work: the next iterate is again in the ball, so the bound applies again.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="exam">
+    <h2>A practice exam problem</h2>
+    <p>The Fall 2025 practice exam asks: minimize \(f(x) = 6x - \log x\) over \(x &gt; 0\) with pure Newton. What happens from \(x_0 = 0.2\), and from \(x_0 = 0.4\)?</p>
+    <ol>
+      <li>\(f'(x) = 6 - 1/x\) and \(f''(x) = 1/x^2 &gt; 0\), so \(f\) is convex.</li>
+      <li>\(f'(x) = 0\) gives the global minimum \(x^* = 1/6\).</li>
+      <li>The Newton step: \(x_{k+1} = x_k - x_k^2(6 - 1/x_k) = 2x_k - 6x_k^2\).</li>
+      <li>The error: \(x_{k+1} - \tfrac16 = -6\big(x_k - \tfrac16\big)^2\). So \(\dfrac{x_{k+1} - x^*}{x_k - x^*} = 1 - 6x_k\).</li>
+    </ol>
+    <p>From \(x_0 = 0.2\), the ratio is \(|1 - 1.2| = 0.2 &lt; 1\), the error shrinks, and it keeps shrinking faster. The iterates are 0.16, 0.1664, 0.16666 and so on. From \(x_0 = 0.4\), the ratio is \(|1 - 2.4| = 1.4 &gt; 1\). The first step lands at \(x_1 = -0.16\), outside the domain, and the iterates diverge.</p>
+    <p>Step 4 is the theorem in miniature. The error is squared at every step, with constant 6. It shrinks only if \(6|x_0 - x^*| &lt; 1\), that is \(0 &lt; x_0 &lt; 1/3\). That interval is the neighbourhood where pure Newton works. Try both starts in the first visual of part a.</p>
+  </section>
+
+  <section class="block" id="example">
+    <h2>Newton against gradient descent</h2>
+    <p>The lecture's example lives on the triangle \(x_1, x_2 &gt; 0\), \(x_1 + x_2 &lt; 1\):</p>
+    <div class="math-block">\[ f(x_1, x_2) = -\log(1 - x_1 - x_2) - \log x_1 - \log x_2. \]</div>
+    <div class="math-block">\[ \nabla f = \begin{pmatrix} \frac{1}{1 - x_1 - x_2} - \frac{1}{x_1} \\ \frac{1}{1 - x_1 - x_2} - \frac{1}{x_2} \end{pmatrix}, \qquad \nabla^2 f = \begin{pmatrix} \frac{1}{(1 - x_1 - x_2)^2} + \frac{1}{x_1^2} & \frac{1}{(1 - x_1 - x_2)^2} \\ \frac{1}{(1 - x_1 - x_2)^2} & \frac{1}{(1 - x_1 - x_2)^2} + \frac{1}{x_2^2} \end{pmatrix}. \]</div>
+    <p>By symmetry the minimum is at \(x^* = (1/3, 1/3)\).</p>
+    <div class="widget" data-widget="newton-vs-gd">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Six steps against a hundred</h4><p>Newton's method (red) and gradient descent (green) from the same start. The lower plot shows the distance to \(x^*\) on a log scale, as on the slide. Click inside the triangle to try other starts.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <p>From the default start, Newton gets within \(10^{-10}\) of \(x^*\) in 6 iterations. The table shows the quadratic phase: the distance goes from \(10^{-2}\) to \(2 \cdot 10^{-4}\) to \(4 \cdot 10^{-8}\), so the exponent roughly doubles each step. Gradient descent with a constant step of 0.02 needs 112 iterations for the same accuracy, and on the log plot its error falls along a straight line: linear convergence. The slide does not say which step size its gradient descent uses. Here 0.02 is chosen so that the iterates stay inside the triangle.</p>
+    <p>Notice also the start of Newton's path. Far from \(x^*\) the first steps are not yet quadratic. They only become so once the iterates are close. Part c is about that first stretch.</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>If \(\nabla f(x^*) = 0\), \(\|\nabla^2 f(x^*)^{-1}\| \le 1/m\) and the Hessian is \(L\)-Lipschitz near \(x^*\), then from any start within \(\delta = \min\{\beta, 2m/(3L)\}\): \(\|x_{k+1} - x^*\| \le \frac{3L}{2m}\|x_k - x^*\|^2\).</li>
+      <li>Quadratic convergence, \(O(\log\log(1/\varepsilon))\) iterations, but only locally.</li>
+      <li>No convexity needed, and maxima attract as well as minima.</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>Last year's midterm ranked gradient descent, Newton's method and stochastic gradient descent on a regression problem. Cost per iteration, from cheapest: SGD, gradient descent, Newton. Number of iterations, from fewest: Newton, gradient descent, SGD. It then showed three contour plots of iterates: the one with very few, direct steps is Newton's method.</p>
+      <p>The practice exam problem above, \(f(x) = 6x - \log x\), is the other classic: compute the error ratio, then decide convergence from two starting points.</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">Newton's method is close to \(x^*\) with \(\|x_k - x^*\| = 10^{-3}\) and \(\frac{3L}{2m} = 1\). What does the theorem guarantee for \(\|x_{k+2} - x^*\|\)?</div>
+      <div class="opts">
+        <button class="opt">At most \(10^{-5}\)</button>
+        <button class="opt">At most \(10^{-6}\)</button>
+        <button class="opt" data-correct>At most \(10^{-12}\)</button>
+      </div>
+      <div class="feedback">One step gives at most \((10^{-3})^2 = 10^{-6}\). The next gives at most \((10^{-6})^2 = 10^{-12}\). The exponent doubles at every step.</div>
+    </div>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">\(f\) is not convex. \(x^*\) is a local maximum with \(\nabla^2 f(x^*)\) invertible, and the Hessian is Lipschitz near \(x^*\). Pure Newton starts very close to \(x^*\). What happens?</div>
+      <div class="opts">
+        <button class="opt">Newton moves away, since it is a minimization method.</button>
+        <button class="opt" data-correct>Newton converges quadratically to the maximum.</button>
+        <button class="opt">The theorem does not apply, since it requires convexity.</button>
+      </div>
+      <div class="feedback">The theorem only needs \(\nabla f(x^*) = 0\), an invertible Hessian and a Lipschitz Hessian. Newton solves \(\nabla f = 0\), so a nearby maximum attracts it.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="newton-step.html"><small>Previous · 20a</small>The Newton step</a>
+    <a class="next" href="global-convergence.html"><small>Next · 20c</small>Global convergence</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 20, slides 9 to 14 · 15.C57 Fall 2025 Exam 2 practice · Background: Boyd and Vandenberghe 9.5.3</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>

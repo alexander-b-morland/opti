@@ -17,7 +17,7 @@ Unofficial. The content is written from the lecture notes and the two course tex
 | 17 | Non-linear optimization: modeling | A tour of non-linear models · Problem classes and convexity · Convex optimization |
 | 18 | Gradient descent | Optimality conditions · The algorithm · Convergence guarantees · Step sizes and initialization |
 | 19 | Stochastic gradient descent | Why stochastic gradients · The SGD algorithm · Convergence and step sizes · Mini-batches and practice |
-| 20 | Newton's method | Not yet written |
+| 20 | Newton's method | The Newton step · Local convergence · Global convergence |
 
 Each class page has four sections: Big picture, Parts, Flashcards and Test yourself. Each part ends with a short check and a note on how the topic has appeared on past exams.
 
@@ -36,6 +36,7 @@ assets/adaptive.js      visuals for class 15
 assets/dp.js            visuals for class 16
 assets/nlp.js           visuals for class 17
 assets/sgd.js           visuals for class 19
+assets/newton.js        visuals for class 20
 tools/wrap.py           optional helper that wraps a page fragment in the shared page shell
 ```
 

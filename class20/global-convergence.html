@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>20c Global convergence · Opti</title>
+<meta name="description" content="Why pure Newton can fail far from the optimum, how a step size fixes it, the two-phase theorem under strong convexity, and the proof of the damped phase.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<script>try{var t=localStorage.getItem("opti-theme");if(t)document.documentElement.setAttribute("data-theme",t)}catch(e){}</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400;1,6..72,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+<link rel="stylesheet" href="/assets/style.css">
+<script defer src="/assets/site.js"></script>
+<script defer src="/assets/plot.js"></script>
+<script defer src="/assets/newton.js"></script>
+</head>
+<body>
+<nav class="site-nav"><div class="container">
+  <a class="brand" href="/">OPTI</a>
+  <a class="nav-crumb" href="./">&larr; Class 20: Newton's method</a>
+  <span class="nav-spacer"></span>
+  <div class="search-wrap"><span class="s-icon">&#9906;</span><input type="search" placeholder="Search…" aria-label="Search all classes"><div class="search-results"></div></div>
+  <button class="theme-btn" type="button" aria-label="Toggle dark mode"></button>
+</div></nav>
+
+<header class="hero container">
+  <p class="eyebrow">Class 20 · Part c</p>
+  <h1>Global <em>convergence</em></h1>
+  <p class="lede">Quadratic convergence is a local promise. Started far away, pure Newton can climb, cycle or run off. A step size smaller than 1 and strong convexity turn it into a method that always gets there.</p>
+</header>
+
+<main class="container">
+  <div class="toc-inline"><b>In this part</b>
+    <ol>
+      <li><a href="#issues">What can go wrong</a></li>
+      <li><a href="#step">Add a step size</a></li>
+      <li><a href="#theorem">Strong convexity to the rescue</a></li>
+      <li><a href="#see">See the two phases</a></li>
+      <li><a href="#proof">Proof of the damped phase</a></li>
+      <li><a href="#summary">Summary</a></li>
+    </ol>
+  </div>
+
+  <section class="block" id="issues">
+    <h2>What can go wrong</h2>
+    <p>The quadratic convergence of part b is local. Far from \(x^*\), pure Newton has three problems:</p>
+    <ul>
+      <li><strong>No descent guarantee.</strong> Nothing ensures \(f(x_{k+1}) \le f(x_k)\) at each iteration. A step of length 1 trusts the quadratic model completely, even where the model is poor.</li>
+      <li><strong>Maxima attract.</strong> Newton looks for \(\nabla f(x) = 0\), and local maxima satisfy that too.</li>
+      <li><strong>Far starts.</strong> Nothing in part b says what happens when \(x_0\) is far from \(x^*\).</li>
+    </ul>
+    <p>The practice exam has a clean example. Take the convex function \(f(x) = (x - 1)^2\) for \(x \le 0\) and \(f(x) = (x + 1)^2\) for \(x &gt; 0\), and start at \(x_0 = 4\). Both pieces have \(f'' = 2\). On the right piece, Newton jumps to the bottom of \((x + 1)^2\), which is \(x_1 = -1\). On the left piece it jumps to the bottom of \((x - 1)^2\), which is \(x_2 = 1\). The iterates alternate between \(-1\) and \(1\) forever, while the minimum sits at the kink \(x = 0\), where \(f\) is not differentiable. The third function in the visual of part a shows it.</p>
+  </section>
+
+  <section class="block" id="step">
+    <h2>Add a step size</h2>
+    <p>The fix is the one class 18 used for gradient descent: do not always take the full step. Take \(x_{k+1} = x_k + \alpha_k d_k\) with \(\alpha_k \le 1\).</p>
+    <div class="box theorem">
+      <span class="label">Proposition</span>
+      <p>If \(\nabla^2 f(x) \succ 0\), then the Newton direction \(d = -\nabla^2 f(x)^{-1}\nabla f(x) \neq 0\) is a descent direction: \(f(x + \alpha d) &lt; f(x)\) for \(\alpha\) sufficiently small.</p>
+    </div>
+    <p>The reason is one line. The slope of \(f\) along \(d\) is \(\nabla f(x)^\top d = -\nabla f(x)^\top \nabla^2 f(x)^{-1} \nabla f(x) = -\lambda(x)^2\). A positive definite Hessian has a positive definite inverse, so this is negative whenever \(\nabla f(x) \neq 0\). With a negative slope, a small enough step goes downhill, as in class 18.</p>
+    <div class="algo">
+      <span class="label">Algorithm · Newton's method with step size</span>
+      <ol>
+        <li>Choose a starting point \(x_0 \in \mathbb{R}^n\). Set \(k = 0\).</li>
+        <li>Repeat until the stopping criterion holds:
+          <ol>
+            <li>Compute the Newton direction \(d_k = -\big(\nabla^2 f(x_k)\big)^{-1}\nabla f(x_k)\).</li>
+            <li>Update \(x_{k+1} = x_k + \alpha_k d_k\).</li>
+            <li>Set \(k \leftarrow k + 1\).</li>
+          </ol>
+        </li>
+      </ol>
+    </div>
+    <p>Note the condition \(\nabla^2 f(x) \succ 0\). Where the Hessian is not positive definite, as near a local maximum, the Newton direction need not point downhill at all.</p>
+  </section>
+
+  <section class="block" id="theorem">
+    <h2>Strong convexity to the rescue</h2>
+    <div class="box theorem">
+      <span class="label">Theorem (global convergence)</span>
+      <p>Let \(f\) be twice continuously differentiable, \(M\)-smooth and \(m\)-strongly convex, with an \(L\)-Lipschitz Hessian: \(\|\nabla^2 f(x) - \nabla^2 f(y)\| \le L\|x - y\|\) for all \(x, y\). For \(0 &lt; \eta \le m^2/L\) and some \(\gamma &gt; 0\), Newton's method satisfies:</p>
+      <ol>
+        <li>If \(\|\nabla f(x_k)\| \ge \eta\): choose \(\alpha_k = m/M\). Then \(f(x_{k+1}) - f(x_k) \le -\gamma\).</li>
+        <li>If \(\|\nabla f(x_k)\| &lt; \eta\): choose \(\alpha_k = 1\). Then \(\|\nabla f(x_{k+1})\| &lt; \eta\) and \(\|\nabla f(x_{k+1})\| \le \dfrac{L}{2m^2}\|\nabla f(x_k)\|^2\).</li>
+      </ol>
+    </div>
+    <p>This splits Newton's method into two phases:</p>
+    <div class="flow">
+      <div class="step"><b>Damped phase</b><span>Gradient still large. Short steps \(\alpha_k = m/M\). Each one lowers \(f\) by at least \(\gamma\).</span></div>
+      <div class="step"><b>Local phase</b><span>Gradient below \(\eta\). Full steps. The gradient stays below \(\eta\) and shrinks quadratically.</span></div>
+    </div>
+    <ul>
+      <li><strong>The damped phase ends.</strong> \(f\) cannot drop below \(z^*\), and each damped step lowers it by at least \(\gamma\). So there are at most \((f(x_0) - z^*)/\gamma\) damped steps.</li>
+      <li><strong>The local phase never ends.</strong> Once \(\|\nabla f\| &lt; \eta\), it stays below \(\eta\), and full steps take over for good.</li>
+      <li><strong>Total iterations:</strong> \[ \frac{f(x_0) - z^*}{\gamma} + \log_2 \log_2\Big(\frac{\varepsilon_0}{\varepsilon}\Big) \quad \text{for some constant } \varepsilon_0. \]</li>
+    </ul>
+    <p>The main objective is therefore to get into a good neighbourhood quickly. Once there, the second term is tiny for any reasonable \(\varepsilon\).</p>
+  </section>
+
+  <section class="block" id="see">
+    <h2>See the two phases</h2>
+    <div class="widget" data-widget="newton-global">
+      <div class="widget-head"><span class="label">Interactive</span><h4>Pure Newton against Newton with step size</h4><p>\(f(x) = \log\cosh x + 0.05x^2\) is strongly convex with \(m = 0.1\) and \(M = 1.1\), and its Hessian is Lipschitz with \(L \approx 0.77\). Start pure Newton at 1.5, then switch to the step size rule of the theorem.</p></div>
+      <div class="widget-body"></div>
+    </div>
+    <ul>
+      <li><strong>Pure Newton from 1.5:</strong> the first step overshoots to about \(-2.3\) and raises \(f\) from 0.97 to 1.83. The iterates then get trapped jumping between about \(-10\) and \(10\). Far from the minimum \(f\) is almost linear, so \(f''\) is small and the step \(-f'/f''\) is huge. From starts within about 1.25 of the minimum, pure Newton converges in a few steps.</li>
+      <li><strong>With the theorem's step size:</strong> while \(|f'(x_k)| \ge \eta = m^2/L \approx 0.013\), the step is \(\alpha_k = m/M \approx 0.09\). The gold points crawl steadily downhill. Once \(|f'|\) drops below \(\eta\), full steps take over and \(|f'|\) collapses in two iterations.</li>
+    </ul>
+    <p>The theorem's \(\eta\) is a worst-case choice, so the damped phase here is long, about 40 to 50 steps depending on the start. It is safe rather than fast. The lecture's takeaway says that numerous enhancements exist to address global convergence.</p>
+  </section>
+
+  <section class="block" id="proof">
+    <h2>Proof of the damped phase</h2>
+    <p>Three properties of the Newton direction \(d_k\) and the decrement \(\lambda(x_k)\) do all the work:</p>
+    <div class="math-block">\[ \begin{aligned} \nabla f(x_k)^\top d_k &= -\nabla f(x_k)^\top \big(\nabla^2 f(x_k)\big)^{-1}\nabla f(x_k) = -\lambda(x_k)^2, \\ \lambda(x_k)^2 &\ge \tfrac1M \|\nabla f(x_k)\|^2 \quad (M\text{-smoothness}), \\ \lambda(x_k)^2 &= d_k^\top \nabla^2 f(x_k)\, d_k \ge m\|d_k\|^2 \quad (\text{strong convexity}). \end{aligned} \]</div>
+    <p>Now apply the quadratic upper bound from \(M\)-smoothness (class 18) to the step \(x_{k+1} = x_k + \alpha_k d_k\):</p>
+    <div class="math-block">\[ \begin{aligned} f(x_{k+1}) &\le f(x_k) + \alpha_k \nabla f(x_k)^\top d_k + \tfrac{M\alpha_k^2}{2}\|d_k\|^2 \\ &\le f(x_k) - \alpha_k\lambda(x_k)^2 + \tfrac{M\alpha_k^2}{2m}\lambda(x_k)^2 \\ &= f(x_k) - \tfrac{m}{2M}\lambda(x_k)^2 \qquad (\alpha_k = m/M). \end{aligned} \]</div>
+    <p>Finally use \(\lambda(x_k)^2 \ge \|\nabla f(x_k)\|^2/M\) and \(\|\nabla f(x_k)\| \ge \eta\):</p>
+    <div class="math-block">\[ f(x_{k+1}) - f(x_k) \le -\frac{m}{2M^2}\|\nabla f(x_k)\|^2 \le -\frac{m}{2M^2}\eta^2 = -\gamma, \qquad \gamma = \frac{m}{2M^2}\eta^2. \]</div>
+    <p class="muted">The logic in one line: a large gradient forces a large decrement, and the short step \(m/M\) turns a large decrement into a guaranteed drop in \(f\).</p>
+  </section>
+
+  <section class="block" id="summary">
+    <h2>Summary</h2>
+    <ul>
+      <li>Pure Newton (\(\alpha = 1\)) is not a descent method. It can increase \(f\), cycle, diverge or converge to a maximum.</li>
+      <li>With \(\nabla^2 f(x) \succ 0\), the Newton direction is a descent direction, so a small enough step decreases \(f\).</li>
+      <li>Under \(M\)-smoothness, \(m\)-strong convexity and a Lipschitz Hessian: a damped phase with \(\alpha_k = m/M\) and a guaranteed drop \(\gamma\) per step, then a local phase with \(\alpha_k = 1\) and quadratic convergence.</li>
+      <li>Iterations: \((f(x_0) - z^*)/\gamma + \log_2\log_2(\varepsilon_0/\varepsilon)\).</li>
+    </ul>
+    <div class="exam-note">
+      <span class="label">How this shows up on the exam</span>
+      <p>Last year's midterm: "Newton's method with step size 1 is a descent algorithm. True or false?" False. It can be attracted by a local maximum, and the full step of the quadratic model can be too large. Compare gradient descent with a small enough step (a descent method, true) and stochastic gradient descent with a constant step (not a descent method).</p>
+      <p>The practice exam's two-parabola function asks you to write down the Newton iterates and sketch them: \(x_1 = -1\), \(x_2 = 1\), \(x_3 = -1\), and so on.</p>
+    </div>
+  </section>
+
+  <section class="block" id="check">
+    <span class="section-badge">Check yourself</span>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">At \(x_k\) the Hessian \(\nabla^2 f(x_k)\) is indefinite. What can you say about the Newton direction \(d_k\)?</div>
+      <div class="opts">
+        <button class="opt">It is always a descent direction, since Newton is a descent method.</button>
+        <button class="opt" data-correct>It need not be a descent direction.</button>
+        <button class="opt">It is always an ascent direction.</button>
+      </div>
+      <div class="feedback">The slope along \(d_k\) is \(-\nabla f^\top (\nabla^2 f)^{-1}\nabla f\). That is negative when the Hessian is positive definite. With an indefinite Hessian it can have either sign.</div>
+    </div>
+    <div class="quiz">
+      <div class="q-label">Quick check</div>
+      <div class="q-text">In the theorem, \(f(x_0) - z^* = 10\) and \(\gamma = 0.5\). What bounds the number of damped steps?</div>
+      <div class="opts">
+        <button class="opt">\(\log_2\log_2(1/\varepsilon)\)</button>
+        <button class="opt" data-correct>20</button>
+        <button class="opt">5</button>
+      </div>
+      <div class="feedback">Each damped step lowers \(f\) by at least 0.5, and \(f\) cannot go below \(z^*\). So there are at most \(10/0.5 = 20\) damped steps. The \(\log\log\) term counts the local phase.</div>
+    </div>
+  </section>
+
+  <nav class="part-nav">
+    <a href="local-convergence.html"><small>Previous · 20b</small>Local convergence</a>
+    <a class="next" href="./#flashcards"><small>Finish with</small>Flashcards and practice questions</a>
+  </nav>
+</main>
+
+<footer class="site-foot"><div class="container">
+  <span>Sources: 15.C57 Lecture 20, slides 15 to 18 and 20 · 15.C57 Fall 2025 Midterm 2 and Exam 2 practice · Background: Boyd and Vandenberghe 9.5.3</span>
+  <a href="https://github.com/alexander-b-morland/opti">Source on GitHub</a>
+</div></footer>
+</body>
+</html>
